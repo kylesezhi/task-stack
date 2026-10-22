@@ -89,14 +89,18 @@ Concept credited; no text or artwork copied from that article.
 - **Single-user server, no auth, fully open.** Anyone who can reach the URL can edit the
   stacks — accepted risk. Deployment hygiene: don't publicize the URL, send `X-Robots-Tag:
   noindex`, avoid the origin appearing in any repo docs.
-- **TypeScript + Node (Fastify) + better-sqlite3.** One language across the repo; types
-  shared with the frontend via a `shared/` workspace package.
+- **TypeScript + Node (Fastify) + `node:sqlite`** (Node's built-in module, release
+  candidate since 24.15; chosen over better-sqlite3 on 2026-10-22 for a
+  zero-native-module runtime and the smallest Docker image). One language across
+  the repo; types shared with the frontend via a `shared/` workspace package.
 - **SQLite** single-file storage; nightly backup = file copy + `GET /api/export` JSON dump.
 - **WebSocket broadcast sync**: every mutation → server broadcasts the full state snapshot
   to all connected clients. State is tiny (hundreds of notes max); no delta logic, no
   conflict handling, always authoritative.
-- Hosting: the owner's existing VPS/home box; systemd or Docker; Caddy + TLS if a domain
-  is handy (optional — no PWA in v1, so no HTTPS requirement).
+- Hosting: the owner's existing VPS/home box via **Docker** — minimal multi-stage
+  image (no native modules), compose with a persistent volume for `data.db`;
+  Caddy + TLS if a domain is handy (optional — no PWA in v1, so no HTTPS
+  requirement).
 
 ### 10. Platform & offline
 - **Responsive web app, desktop + mobile; no PWA in v1.** PWA (manifest, service worker,
@@ -108,7 +112,9 @@ Concept credited; no text or artwork copied from that article.
 - **Svelte 5 + Vite** frontend (built-in spring/tween transitions fit the paper physics),
   **hand-written CSS** (the aesthetic is bespoke; utility frameworks add nothing here),
   CSS/SVG animation only.
-- Repo: **pnpm workspaces** — `web/`, `server/`, `shared/` (shared TS types).
+- Repo: **pnpm workspaces** — `web/`, `server/`, `shared/` (shared TS types); toolchain
+  managed by **mise** (`mise.toml` pins node + pnpm; mise is the only global
+  prerequisite).
 - Tests: **Vitest** units for stack-ordering logic + API handlers; **Playwright** e2e smoke
   (push from one browser context, watch it arrive in another via WS; push→pop→archive flow).
 - Evergreen browsers only; full keyboard reachability (`/` focuses input, Enter pushes,

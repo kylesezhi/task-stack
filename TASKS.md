@@ -26,7 +26,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 | 2 · Web mechanics | T16–T23 — state client, all views working (ugly CSS), e2e |
 | 3 · Stack visuals | T24–T29 — paper aesthetic, growing stack, push animation |
 | 4 · Ceremony & polish | T30–T34 — pop ritual, toss, empty state, a11y |
-| 5 · Deploy & ship | T35–T39 — prod build, deployment, backups, README, exit review |
+| 5 · Deploy & ship | T35–T40 — prod build, minimal Docker image, compose, backups, README, exit review |
 
 ---
 
@@ -81,10 +81,11 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 1 — Server mechanics
 
-- [ ] **T08 · SQLite + schema** — M
-  `better-sqlite3`; DB path via env (`server/data.db` default); on boot create
-  tables per `PLAN.md` (stacks, notes, completed_notes, settings); WAL mode;
-  foreign keys on.
+- [ ] **T08 · SQLite + schema (`node:sqlite`)** — M
+  Built-in `node:sqlite` module (`DatabaseSync` — no third-party driver, needs
+  Node ≥ 24.15 per `mise.toml`); DB path via env (`server/data.db` default);
+  on boot create tables per `PLAN.md` (stacks, notes, completed_notes,
+  settings); WAL via `PRAGMA journal_mode = WAL`; foreign keys on.
   **Done when:** boot creates the DB; an integration test asserts all four
   tables and their columns exist.
   Depends: T03
@@ -290,28 +291,42 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   localhost.
   Depends: T15, Phase 4
 
-- [ ] **T36 · Deployment unit** — M ⚠ (decide systemd vs Docker for your box)
-  systemd unit **or** Dockerfile + compose (whichever fits the target);
-  persistent volume for `data.db`; auto-restart.
-  **Done when:** service boots on the target box via documented steps, survives
-  a reboot, `/api/health` returns 200.
+- [ ] **T36 · Minimal Docker image** — M
+  Multi-stage `Dockerfile`: builder installs the pinned toolchain from
+  `mise.toml` (node + pnpm) and runs `pnpm build`; runtime stage copies only
+  `server/dist`, production `node_modules`, and `web/dist` onto a minimal Node
+  base (distroless preferred, alpine fine — no native modules since the server
+  uses built-in `node:sqlite`). `.dockerignore` (data.db, node_modules,
+  mockups, reference). Runs as non-root; `DB_PATH` points at a volume.
+  **Done when:** `docker build` succeeds; container smoke run passes
+  (`/api/health` 200, stack view served, a pushed note survives a restart via
+  the volume); `docker image ls` reports ≤ 100 MB — record the measured size
+  and trim via `docker history` if over.
   Depends: T35
 
-- [ ] **T37 · Backups** — S
-  Nightly cron copying the SQLite file; README section documenting it plus the
-  `/api/export` alternative.
-  **Done when:** cron installed and one manual run succeeds; a restore is tested
-  once (copy the DB back → state intact).
+- [ ] **T37 · Compose + ops** — M (Docker chosen; systemd dropped)
+  `docker-compose.yml`: image from T36, persistent volume for `data.db`, port
+  mapping, `restart: unless-stopped`.
+  **Done when:** service boots on the target box via documented steps, survives
+  a reboot, `/api/health` returns 200.
   Depends: T36
 
-- [ ] **T38 · README + LICENSE final** — M
-  What it is, screenshot (a ceremony GIF if possible), self-host instructions,
-  credit to the originating article, MIT license, open-server hygiene note
-  (never publish the origin URL).
+- [ ] **T38 · Backups** — S
+  Nightly job copying the SQLite file from the host volume (or via
+  `docker compose cp`); README section documenting it plus the `/api/export`
+  alternative.
+  **Done when:** the job is installed and one manual run succeeds; a restore
+  is tested once (put the DB back on the volume → state intact).
+  Depends: T37
+
+- [ ] **T39 · README + LICENSE final** — M
+  What it is, screenshot (a ceremony GIF if possible), Docker-first self-host
+  instructions, credit to the originating article, MIT license, open-server
+  hygiene note (never publish the origin URL).
   **Done when:** a fresh clone builds and runs by following the README alone.
-  Depends: T36
+  Depends: T37
 
-- [ ] **T39 · v1 exit review** — S
+- [ ] **T40 · v1 exit review** — S
   Final checklist pass; docs updated to match reality (palette recorded back
   into `DECISIONS.md`, any drifted decisions noted).
   **Done when:** every item below is ticked.

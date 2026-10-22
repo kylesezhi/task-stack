@@ -119,7 +119,7 @@ task-stack/
 ├── mise.toml      # pinned toolchain: node + pnpm — mise is the only prerequisite
 ├── package.json (pnpm workspaces) · .github/workflows/ci.yml
 ├── shared/        # TS types + pure logic (ordering, tilt/color), consumed by web+server
-├── server/        # Fastify + better-sqlite3 + WS; serves web/dist in production
+├── server/        # Fastify + node:sqlite (built-in) + WS; serves web/dist in production
 └── web/           # Svelte 5 + Vite; hand-written CSS; e2e tests live here (Playwright)
 ```
 
@@ -155,11 +155,12 @@ wording); accessibility (focus order, aria-live stack updates, reduced-motion
 fallback: fade instead of ritual).
 
 **M4 — deployment (lives on the box)**
-`GET /api/export`; server serves `web/dist`; systemd unit **or** Dockerfile +
-compose; optional Caddy reverse proxy + TLS (only if a domain is handy);
-nightly backup note (cron: cp sqlite file); README final pass (screenshots,
-credit, self-host instructions); deployment hygiene for the open server:
-noindex header, origin never written into repo files.
+`GET /api/export`; server serves `web/dist`; minimal multi-stage Docker
+image (pure-JS runtime — no native modules, `node:sqlite` is built in) +
+compose with a persistent volume for `data.db`; optional Caddy reverse proxy
++ TLS (only if a domain is handy); nightly backup note; README final pass
+(screenshots, credit, self-host instructions); deployment hygiene for the
+open server: noindex header, origin never written into repo files.
 
 ## Non-goals (v1, by design)
 

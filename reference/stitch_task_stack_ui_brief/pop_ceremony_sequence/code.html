@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "secondary-fixed-dim": "#d2c978",
+          "error": "#ba1a1a",
+          "tertiary-fixed": "#ece1d7",
+          "surface-container-highest": "#e4e2dd",
+          "inverse-primary": "#ffb4a4",
+          "on-error": "#ffffff",
+          "on-surface-variant": "#5a413b",
+          "primary-fixed-dim": "#ffb4a4",
+          "on-primary-container": "#fffbff",
+          "secondary-container": "#efe591",
+          "tertiary-container": "#7b736b",
+          "on-background": "#1b1c18",
+          "on-tertiary": "#ffffff",
+          "secondary-fixed": "#efe591",
+          "on-tertiary-container": "#fffbff",
+          "outline-variant": "#e2bfb7",
+          "primary-fixed": "#ffdad3",
+          "outline": "#8e706a",
+          "background": "#fbf9f3",
+          "surface-container-high": "#eae8e2",
+          "surface-dim": "#dcdad4",
+          "tertiary-fixed-dim": "#cfc5bb",
+          "on-secondary-fixed-variant": "#4e4802",
+          "secondary": "#67601b",
+          "on-error-container": "#93000a",
+          "primary": "#ae2a0c",
+          "inverse-surface": "#30312d",
+          "surface-variant": "#e4e2dd",
+          "on-primary-fixed-variant": "#8c1800",
+          "surface-container-low": "#f5f3ed",
+          "surface-container-lowest": "#ffffff",
+          "inverse-on-surface": "#f3f1eb",
+          "on-secondary-container": "#6d6620",
+          "tertiary": "#625b53",
+          "surface-container": "#f0eee8",
+          "on-primary-fixed": "#3d0600",
+          "surface-tint": "#b22c0f",
+          "on-primary": "#ffffff",
+          "on-surface": "#1b1c18",
+          "surface-bright": "#fbf9f3",
+          "on-tertiary-fixed": "#201b15",
+          "on-tertiary-fixed-variant": "#4c463e",
+          "on-secondary-fixed": "#1f1c00",
+          "primary-container": "#d14224",
+          "error-container": "#ffdad6",
+          "on-secondary": "#ffffff",
+          "surface": "#fbf9f3"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.125rem",
+          "lg": "0.25rem",
+          "xl": "0.5rem",
+          "full": "0.75rem"
+        },
+        "spacing": {
+          "space-sm": "0.5rem",
+          "gutter-mobile": "0.75rem",
+          "margin": "2.5rem",
+          "space-xl": "2.5rem",
+          "space-xs": "0.25rem",
+          "space-lg": "1.5rem",
+          "margin-mobile": "1rem",
+          "space-md": "1rem",
+          "gutter": "1.5rem"
+        },
+        "fontFamily": {
+          "display-lg-mobile": [
+            "Epilogue"
+          ],
+          "headline-lg-mobile": [
+            "Epilogue"
+          ],
+          "label-lg": [
+            "Inter"
+          ],
+          "body-md": [
+            "Inter"
+          ],
+          "label-md": [
+            "Inter"
+          ],
+          "body-lg": [
+            "Epilogue"
+          ],
+          "headline-lg": [
+            "Epilogue"
+          ],
+          "label-sm": [
+            "Inter"
+          ],
+          "display-lg": [
+            "Epilogue"
+          ],
+          "headline-md": [
+            "Epilogue"
+          ]
+        },
+        "fontSize": {
+          "display-lg-mobile": [
+            "26px",
+            {
+              "lineHeight": "34px",
+              "fontWeight": "500"
+            }
+          ],
+          "headline-lg-mobile": [
+            "22px",
+            {
+              "lineHeight": "30px",
+              "fontWeight": "500"
+            }
+          ],
+          "label-lg": [
+            "13px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0.02em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-md": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "fontWeight": "400"
+            }
+          ],
+          "label-md": [
+            "12px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "0.03em",
+              "fontWeight": "500"
+            }
+          ],
+          "body-lg": [
+            "18px",
+            {
+              "lineHeight": "28px",
+              "fontWeight": "400"
+            }
+          ],
+          "headline-lg": [
+            "28px",
+            {
+              "lineHeight": "38px",
+              "fontWeight": "500"
+            }
+          ],
+          "label-sm": [
+            "11px",
+            {
+              "lineHeight": "14px",
+              "letterSpacing": "0.04em",
+              "fontWeight": "400"
+            }
+          ],
+          "display-lg": [
+            "34px",
+            {
+              "lineHeight": "44px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "500"
+            }
+          ],
+          "headline-md": [
+            "22px",
+            {
+              "lineHeight": "30px",
+              "fontWeight": "400"
+            }
+          ]
+        }
+      }
+    }
+  };</script></head><body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col"><header class="fixed top-0 left-0 right-0 z-50 bg-surface/85 backdrop-blur-md shadow-[0_1px_8px_rgba(68,52,38,0.04)]"><div class="h-16 max-w-7xl mx-auto px-margin-mobile lg:px-margin flex items-center justify-between"><div class="flex items-center"><a class="group flex items-center gap-space-sm px-space-sm py-space-xs rounded text-tertiary hover:text-on-surface hover:bg-surface-container-high transition-all" data-path="stacks-overview" href="#"><span class="flex flex-col gap-[2px] w-3.5 items-center justify-center"><span class="w-3.5 h-[1.5px] bg-tertiary group-hover:bg-on-surface rounded-full transition-colors"></span><span class="w-3 h-[1.5px] bg-tertiary group-hover:bg-on-surface rounded-full transition-colors"></span><span class="w-2.5 h-[1.5px] bg-tertiary group-hover:bg-on-surface rounded-full transition-colors"></span></span><span class="font-label-lg text-label-lg tracking-wider uppercase">Stacks</span></a></div><nav class="flex flex-col items-center justify-center select-none" data-active-classes="text-on-surface"><a aria-current="page" class="font-headline-md tracking-tight transition-colors leading-none text-on-surface" data-path="active-stack" href="#">Work</a><span class="font-label-sm text-label-sm text-tertiary mt-0.5 tracking-wider font-normal">8 notes</span></nav><div class="flex items-center justify-end"><a class="font-label-md text-label-md text-tertiary hover:text-on-surface hover:bg-surface-container-high px-space-sm py-space-xs rounded transition-colors tracking-wide" data-path="archive" href="#">Archive <span class="text-tertiary-container font-label-sm text-label-sm ml-0.5">(214)</span></a></div></div></header><main class="w-full pt-16 flex-1 flex flex-col bg-surface"><div class="flex flex-col w-full">
+<!-- Desk Ambience Atmosphere -->
+<div class="relative w-full max-w-7xl mx-auto px-gutter-mobile lg:px-margin py-space-md lg:py-space-xl overflow-hidden">
+<!-- Editorial Stage Header & Ritual Subtitle -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-xl">
+<div class="max-w-2xl">
+<div class="flex items-center gap-space-xs mb-space-xs">
+<span class="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-tertiary">Tactile Release Sequence • Kinetic Micro-Study</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface tracking-tight">The Pop Ceremony</h1>
+<p class="font-body-lg text-body-lg text-tertiary mt-space-xs leading-relaxed">
+          The psychological release of finishing a task. Stripping away synthetic checkboxes for an incandescent, physical catharsis on warm morning paper.
+        </p>
+</div>
+<!-- Play / Step Controller -->
+<div class="flex items-center gap-space-sm bg-surface-container p-1 rounded-full shadow-sm self-start md:self-auto">
+<button class="w-9 h-9 flex items-center justify-center rounded-full text-tertiary hover:text-on-surface hover:bg-surface-container-high transition-colors" id="btn-prev" title="Previous Phase">
+<span class="material-symbols-outlined text-base">arrow_back</span>
+</button>
+<div class="flex items-center px-space-xs gap-1.5" id="stepper-dots">
+<button class="step-dot w-2 h-2 rounded-full bg-primary transition-all duration-300" data-step="0"></button>
+<button class="step-dot w-2 h-2 rounded-full bg-surface-container-highest transition-all duration-300" data-step="1"></button>
+<button class="step-dot w-2 h-2 rounded-full bg-surface-container-highest transition-all duration-300" data-step="2"></button>
+<button class="step-dot w-2 h-2 rounded-full bg-surface-container-highest transition-all duration-300" data-step="3"></button>
+<button class="step-dot w-2 h-2 rounded-full bg-surface-container-highest transition-all duration-300" data-step="4"></button>
+</div>
+<button class="w-9 h-9 flex items-center justify-center rounded-full text-tertiary hover:text-on-surface hover:bg-surface-container-high transition-colors" id="btn-next" title="Next Phase">
+<span class="material-symbols-outlined text-base">arrow_forward</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all active:scale-95" id="btn-play-sequence">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+<span>Replay Ritual</span>
+</button>
+</div>
+</div>
+<!-- Active Stage Canvas: Focus Display -->
+<div class="relative w-full bg-surface-container-low rounded-xl p-space-md lg:p-space-xl mb-space-xl overflow-hidden shadow-sm">
+<!-- Faint Desk Sunlight Gradients -->
+<div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-secondary-fixed/40 via-surface-container/20 to-transparent blur-3xl pointer-events-none"></div>
+<div class="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-tl from-primary-fixed/30 via-transparent to-transparent blur-3xl pointer-events-none"></div>
+<!-- Stage Grid: Left Interactive Stage, Right Sensory Notation -->
+<div class="relative grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center min-h-[460px]">
+<!-- Interactive Paper Plinth (Desktop Left / Center) -->
+<div class="lg:col-span-7 flex flex-col items-center justify-center relative min-h-[380px] w-full">
+<!-- Stack Base Silhouette (The Paper Substrate) -->
+<div class="relative w-72 sm:w-80 h-72 sm:h-80 flex items-center justify-center">
+<!-- Underneath Mint Note (The Upcoming Task Layer) -->
+<div class="absolute inset-0 bg-[#D4E8DC] rounded-sm p-space-lg flex flex-col justify-between shadow-sm transition-all duration-700 select-none rotate-[-1deg]" id="under-note">
+<div class="w-full h-4 bg-black/[0.03] -mt-space-lg -mx-space-lg px-space-lg rounded-t-sm"></div>
+<div>
+<span class="font-label-sm text-label-sm text-tertiary/70 tracking-wider uppercase">Active Stack • Work</span>
+<p class="font-headline-md text-headline-md text-on-surface mt-2 font-normal leading-snug">
+                  Call Maya about the studio lease
+                </p>
+</div>
+<div class="flex items-center justify-between text-tertiary/70 font-label-sm text-label-sm">
+<span>09:45 AM • Desk</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-lowest/60 text-tertiary">Next</span>
+</div>
+</div>
+<!-- Dynamic Actor Paper Layer (Changes visual form per ritual stage) -->
+<div class="absolute inset-0 bg-[#FBF096] rounded-sm p-space-lg flex flex-col justify-between shadow-md transition-all duration-700 select-none rotate-[2deg] z-20" id="actor-note">
+<!-- Translucent Adhesive Top Bar -->
+<div class="w-full h-4 bg-black/[0.04] -mt-space-lg -mx-space-lg px-space-lg rounded-t-sm" id="actor-glue"></div>
+<!-- Dynamic Internal Content / Ember Render Box -->
+<div class="relative z-10 transition-opacity duration-300" id="actor-content">
+<span class="font-label-sm text-label-sm text-on-surface-variant/70 tracking-wider uppercase">Priority Note</span>
+<p class="font-headline-md text-headline-md text-on-surface mt-2 font-normal leading-snug" id="actor-text">
+                  Finalize the Q3 print typography proof sheets
+                </p>
+<div class="mt-4 flex items-center gap-2">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="font-label-sm text-label-sm text-tertiary">Morning Sunlight Slot</span>
+</div>
+</div>
+<!-- Finished Stamp Button On-note -->
+<div class="flex items-center justify-between z-10" id="actor-footer">
+<span class="font-label-sm text-label-sm text-tertiary">Wood Desk</span>
+<button class="px-space-md py-1 bg-primary text-on-primary font-label-md text-label-md rounded tracking-wide shadow-sm hover:bg-primary-container transition-transform active:scale-90 flex items-center gap-1" id="actor-action-btn">
+<span>DONE</span>
+<span class="material-symbols-outlined text-xs">done</span>
+</button>
+</div>
+<!-- Luminous Ember Line Simulation Overlay -->
+<div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-500 overflow-hidden rounded-sm" id="ember-overlay">
+<!-- SVG Flame/Char Line Texture -->
+<svg class="w-full h-full absolute inset-0" preserveaspectratio="none" viewbox="0 0 100 100">
+<defs>
+<lineargradient id="warmEmberGrad" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#FFE600" stop-opacity="0.9"></stop>
+<stop offset="45%" stop-color="#FF9A3C" stop-opacity="0.85"></stop>
+<stop offset="100%" stop-color="#FF4500" stop-opacity="0.95"></stop>
+</lineargradient>
+</defs>
+<path class="opacity-90" d="M0,0 L100,0 L100,20 Q80,45 60,30 T20,70 L0,100 Z" fill="url(#warmEmberGrad)" id="burn-path"></path>
+</svg>
+<!-- Glowing Ember Particles -->
+<div class="absolute bottom-6 right-6 w-3 h-3 rounded-full bg-[#FFE600] blur-[1px] animate-ping"></div>
+<div class="absolute top-12 right-10 w-2 h-2 rounded-full bg-[#FF9A3C] blur-[1px] animate-pulse"></div>
+<div class="absolute top-1/2 left-1/3 w-2.5 h-2.5 rounded-full bg-[#FF4500] blur-[1px]"></div>
+</div>
+<!-- Disintegration Spark Emitter Container -->
+<div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-500" id="spark-emitter">
+<div class="spark absolute w-1.5 h-1.5 rounded-full bg-[#FFE600] top-10 left-12 animate-bounce"></div>
+<div class="spark absolute w-2 h-2 rounded-full bg-[#FF9A3C] top-20 right-16 animate-pulse"></div>
+<div class="spark absolute w-1.5 h-1.5 rounded-full bg-[#FF4500] bottom-14 left-1/2"></div>
+<div class="spark absolute w-2 h-2 rounded-full bg-[#FFE600] top-1/3 right-1/4"></div>
+</div>
+</div>
+</div>
+<!-- Shadow Layer Anchor -->
+<div class="w-64 h-6 rounded-full bg-[#443426]/10 blur-md -mt-2 transition-all duration-700" id="cast-shadow"></div>
+</div>
+<!-- Right: Sensory Breakdown & Frame Annotation -->
+<div class="lg:col-span-5 flex flex-col justify-center space-y-space-md">
+<div class="flex items-center gap-space-sm">
+<span class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-label-md text-label-md font-semibold text-primary" id="frame-number">
+              1
+            </span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-tertiary" id="frame-roman">
+              Phase I • Kinematics
+            </span>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface" id="frame-title">
+              Lift • Adhesive Separation
+            </h2>
+<p class="font-body-md text-body-md text-tertiary mt-2 leading-relaxed" id="frame-desc">
+              Upon stamp impact, the adhesive strip releases with a soft, analog detachment. The canary sheet levitates 12mm off the desk stack, casting an expanded amber-tinged shadow onto the awaiting note beneath.
+            </p>
+</div>
+<!-- Tactile Annotation Box (Manuscript Margin Style) -->
+<div class="p-space-md bg-surface rounded-lg shadow-sm border-l-2 border-primary/40 relative">
+<span class="material-symbols-outlined text-primary text-base absolute -left-2.5 top-space-md bg-surface rounded-full">spa</span>
+<h3 class="font-label-lg text-label-lg text-on-surface mb-1">Analog Haptic Profile</h3>
+<p class="font-body-md text-body-md text-tertiary leading-snug" id="frame-haptic">
+              Micro-impulse 42Hz frequency mimicking glue release fibers stretching and parting from cellulose stock.
+            </p>
+<div class="mt-3 flex items-center gap-space-md font-label-sm text-label-sm text-tertiary">
+<span class="flex items-center gap-1" id="frame-temp">
+<span class="material-symbols-outlined text-xs text-primary">wb_sunny</span>
+<span>Desk Ambient 24°C</span>
+</span>
+<span class="flex items-center gap-1" id="frame-duration">
+<span class="material-symbols-outlined text-xs text-secondary">timer</span>
+<span>280ms Duration</span>
+</span>
+</div>
+</div>
+<!-- Interactive Micro-Controls -->
+<div class="flex items-center gap-space-sm pt-space-xs">
+<button class="px-space-md py-1.5 rounded bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors font-label-md text-label-md flex items-center gap-1.5" id="btn-replay-single">
+<span class="material-symbols-outlined text-sm">cached</span>
+<span>Re-trigger Frame</span>
+</button>
+<span class="font-label-sm text-label-sm text-tertiary">Drag slider or click sequence below</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 5-Frame Ritual Mosaic / Side-by-Side Progression Deck -->
+<div class="w-full mb-space-xl">
+<div class="flex items-center justify-between mb-space-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">The 5-Step Metamorphosis</h2>
+<p class="font-body-md text-body-md text-tertiary">Select any stage to inspect mechanical nuances and kinetic velocity.</p>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary uppercase tracking-widest hidden sm:inline-block">5 Discrete Frames</span>
+</div>
+<!-- 5-Column Bento Grid of Ritual Frames -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-space-md" id="cards-container">
+<!-- Frame 1 Card -->
+<div class="ritual-card group cursor-pointer bg-surface-container-low rounded-lg p-space-md transition-all duration-300 hover:bg-surface-container shadow-sm border-2 border-primary" data-card-step="0">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-sm text-label-sm text-primary font-semibold">01 • LIFT</span>
+<span class="material-symbols-outlined text-sm text-primary">arrow_upward</span>
+</div>
+<div class="w-full h-32 bg-[#FBF096] rounded p-3 relative overflow-hidden flex flex-col justify-between shadow-md group-hover:-translate-y-1 transition-transform">
+<div class="w-full h-2 bg-black/[0.05] -mx-3 -mt-3 px-3"></div>
+<p class="font-label-sm text-label-sm text-on-surface leading-tight font-medium">Finalize Q3 print proofs...</p>
+<div class="flex items-center justify-end">
+<span class="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</span>
+</div>
+</div>
+<p class="font-label-sm text-label-sm text-tertiary mt-3 leading-relaxed">
+            Glue releases with tensile spring. Edge tilts +3.5° into desk light.
+          </p>
+</div>
+<!-- Frame 2 Card -->
+<div class="ritual-card group cursor-pointer bg-surface-container-low rounded-lg p-space-md transition-all duration-300 hover:bg-surface-container shadow-sm border-2 border-transparent" data-card-step="1">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-sm text-label-sm text-tertiary font-medium">02 • CRUMPLE</span>
+<span class="material-symbols-outlined text-sm text-tertiary">compress</span>
+</div>
+<div class="w-full h-32 bg-surface-container-high rounded p-3 relative overflow-hidden flex items-center justify-center">
+<!-- Wrinkle Silhouette -->
+<div class="w-16 h-16 bg-[#FBF096] rounded-lg shadow-inner rotate-12 flex items-center justify-center border-dashed border-2 border-on-surface-variant/20 group-hover:scale-105 transition-transform">
+<span class="font-label-sm text-label-sm text-tertiary text-[10px]">wrinkle</span>
+</div>
+</div>
+<p class="font-label-sm text-label-sm text-tertiary mt-3 leading-relaxed">
+            Corners fold inward. Paper folds compress toward task center.
+          </p>
+</div>
+<!-- Frame 3 Card -->
+<div class="ritual-card group cursor-pointer bg-surface-container-low rounded-lg p-space-md transition-all duration-300 hover:bg-surface-container shadow-sm border-2 border-transparent" data-card-step="2">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-sm text-label-sm text-tertiary font-medium">03 • BURN</span>
+<span class="material-symbols-outlined text-sm text-tertiary">local_fire_department</span>
+</div>
+<div class="w-full h-32 bg-gradient-to-tr from-[#FFE600]/30 via-[#FF9A3C]/40 to-[#FF4500]/40 rounded p-3 relative overflow-hidden flex flex-col justify-end">
+<div class="w-full h-1/2 bg-gradient-to-t from-[#FF4500]/60 to-transparent absolute bottom-0 left-0"></div>
+<div class="relative z-10 flex items-center gap-1 text-on-surface">
+<span class="w-2 h-2 rounded-full bg-[#FFE600] animate-ping"></span>
+<span class="font-label-sm text-label-sm font-semibold">Warm Embers</span>
+</div>
+</div>
+<p class="font-label-sm text-label-sm text-tertiary mt-3 leading-relaxed">
+            Amber glow devours text fibers. Joyful, golden celebration burn.
+          </p>
+</div>
+<!-- Frame 4 Card -->
+<div class="ritual-card group cursor-pointer bg-surface-container-low rounded-lg p-space-md transition-all duration-300 hover:bg-surface-container shadow-sm border-2 border-transparent" data-card-step="3">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-sm text-label-sm text-tertiary font-medium">04 • DRIFT</span>
+<span class="material-symbols-outlined text-sm text-tertiary">air</span>
+</div>
+<div class="w-full h-32 bg-surface-container-high rounded p-3 relative overflow-hidden flex flex-col items-center justify-center">
+<!-- Sparks fading -->
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-[#FF9A3C] blur-[0.5px] -translate-y-2 animate-bounce"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-[#FFE600] translate-y-1"></span>
+<span class="w-2 h-2 rounded-full bg-primary/40 -translate-y-4"></span>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary mt-2 tracking-widest text-[10px] uppercase">Ether Ash</span>
+</div>
+<p class="font-label-sm text-label-sm text-tertiary mt-3 leading-relaxed">
+            Particles dissolve effortlessly into the warm room atmosphere.
+          </p>
+</div>
+<!-- Frame 5 Card -->
+<div class="ritual-card group cursor-pointer bg-surface-container-low rounded-lg p-space-md transition-all duration-300 hover:bg-surface-container shadow-sm border-2 border-transparent" data-card-step="4">
+<div class="flex items-center justify-between mb-3">
+<span class="font-label-sm text-label-sm text-tertiary font-medium">05 • REVEAL</span>
+<span class="material-symbols-outlined text-sm text-tertiary">filter_none</span>
+</div>
+<div class="w-full h-32 bg-[#D4E8DC] rounded p-3 relative overflow-hidden flex flex-col justify-between shadow-sm group-hover:scale-[1.02] transition-transform">
+<div class="w-full h-2 bg-black/[0.04] -mx-3 -mt-3 px-3"></div>
+<p class="font-label-sm text-label-sm text-on-surface leading-tight font-medium">Call Maya about studio lease</p>
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-tertiary text-[10px]">New Top Task</span>
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+</div>
+</div>
+<p class="font-label-sm text-label-sm text-tertiary mt-3 leading-relaxed">
+            Fresh mint note springs into place. Cognitive slate cleared.
+          </p>
+</div>
+</div>
+</div>
+<!-- Tactile Philosophy Vignette (Editorial Paper Comparison) -->
+<div class="w-full grid grid-cols-1 md:grid-cols-3 gap-space-md pt-space-md border-t border-surface-container-highest">
+<div class="p-space-md bg-surface-container-low rounded-lg">
+<span class="material-symbols-outlined text-primary text-xl mb-2">ink_eraser</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Psychological Cleanse</h3>
+<p class="font-body-md text-body-md text-tertiary mt-1 leading-relaxed">
+          Digital checkboxes encourage hoarded lists. The ceremony ensures completed work actually departs your visual consciousness.
+        </p>
+</div>
+<div class="p-space-md bg-surface-container-low rounded-lg">
+<span class="material-symbols-outlined text-secondary text-xl mb-2">fireplace</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Warmth over Punishment</h3>
+<p class="font-body-md text-body-md text-tertiary mt-1 leading-relaxed">
+          The ember tones (#FF9A3C, #FFE600) evoke hearth and morning sunlight—celebrating closure without red corporate urgency.
+        </p>
+</div>
+<div class="p-space-md bg-surface-container-low rounded-lg">
+<span class="material-symbols-outlined text-tertiary text-xl mb-2">touch_app</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Authentic Spring Physics</h3>
+<p class="font-body-md text-body-md text-tertiary mt-1 leading-relaxed">
+          The underlying pastel mint note responds with a 3.2px subtle spring oscillation when weight leaves the desk blotter.
+        </p>
+</div>
+</div>
+</div>
+<!-- Interactive State Engine Script -->
+<script>
+    (function initPopCeremony() {
+      const phases = [
+        {
+          num: 1,
+          roman: "Phase I • Kinematics",
+          title: "Lift • Adhesive Separation",
+          desc: "Upon stamp impact, the adhesive strip releases with a soft, analog detachment. The canary sheet levitates 12mm off the desk stack, casting an expanded amber-tinged shadow onto the awaiting note beneath.",
+          haptic: "Micro-impulse 42Hz frequency mimicking glue release fibers stretching and parting from cellulose stock.",
+          temp: "Desk Ambient 24°C",
+          duration: "280ms Duration",
+          applyActor: (actor, shadow, under, ember, spark, content, footer) => {
+            actor.style.transform = "translateY(-24px) scale(1.04) rotate(3deg)";
+            actor.style.opacity = "1";
+            actor.style.filter = "none";
+            actor.style.borderRadius = "0.125rem";
+            actor.style.backgroundColor = "#FBF096";
+            shadow.style.transform = "scale(1.2)";
+            shadow.style.opacity = "0.2";
+            under.style.transform = "rotate(-1deg) scale(0.98)";
+            ember.style.opacity = "0";
+            spark.style.opacity = "0";
+            content.style.opacity = "1";
+            footer.style.opacity = "1";
+          }
+        },
+        {
+          num: 2,
+          roman: "Phase II • Compression",
+          title: "Crumple • Geometric Collapse",
+          desc: "The perimeter edges curl inward diagonally. Four tensile vertices compress the note into an organic paper core, generating physical crease lines and deepened ambient occlusion shadows.",
+          haptic: "Double granular crunch at 110Hz, replicating fibers folding under deliberate finger compression.",
+          temp: "Localized Warmth +1.2°C",
+          duration: "340ms Duration",
+          applyActor: (actor, shadow, under, ember, spark, content, footer) => {
+            actor.style.transform = "translateY(-14px) scale(0.68) rotate(-8deg)";
+            actor.style.opacity = "0.95";
+            actor.style.filter = "contrast(1.2) drop-shadow(0 8px 12px rgba(68,52,38,0.25))";
+            actor.style.borderRadius = "1rem";
+            actor.style.backgroundColor = "#F5E87C";
+            shadow.style.transform = "scale(0.8)";
+            shadow.style.opacity = "0.3";
+            under.style.transform = "rotate(-1.5deg) scale(0.99)";
+            ember.style.opacity = "0";
+            spark.style.opacity = "0";
+            content.style.opacity = "0.3";
+            footer.style.opacity = "0";
+          }
+        },
+        {
+          num: 3,
+          roman: "Phase III • Pyrotechnic Catharsis",
+          title: "Burn • Incandescent Transition",
+          desc: "Torn margins ignite with warm golden flame (#FFE600 to #FF4500). Ink and cellulose turn to luminous celebration glow, vaporizing completed obligations into weightless thermal energy.",
+          haptic: "Sustained resonant rumble 28Hz with micro-tick crackles of carbon sparks parting.",
+          temp: "Thermal Peak 64°C",
+          duration: "520ms Duration",
+          applyActor: (actor, shadow, under, ember, spark, content, footer) => {
+            actor.style.transform = "translateY(-30px) scale(0.55) rotate(14deg)";
+            actor.style.opacity = "0.85";
+            actor.style.filter = "drop-shadow(0 0 20px #FF9A3C)";
+            actor.style.borderRadius = "1.5rem";
+            actor.style.backgroundColor = "#FF9A3C";
+            shadow.style.transform = "scale(0.6)";
+            shadow.style.opacity = "0.15";
+            under.style.transform = "rotate(-0.5deg) scale(1)";
+            ember.style.opacity = "1";
+            spark.style.opacity = "0.6";
+            content.style.opacity = "0";
+            footer.style.opacity = "0";
+          }
+        },
+        {
+          num: 4,
+          roman: "Phase IV • Vaporization",
+          title: "Drift • Ethereal Dissolution",
+          desc: "The residual glow divides into shimmering microscopic embers floating upward into the morning window light. Total clearance of the cognitive desk surface.",
+          haptic: "Velvet decay to null; subtle tactile breath signifying emptiness achieved.",
+          temp: "Cooling to Ambient 24°C",
+          duration: "400ms Duration",
+          applyActor: (actor, shadow, under, ember, spark, content, footer) => {
+            actor.style.transform = "translateY(-65px) scale(0.2) rotate(24deg)";
+            actor.style.opacity = "0";
+            actor.style.filter = "blur(4px)";
+            shadow.style.transform = "scale(0.3)";
+            shadow.style.opacity = "0.05";
+            under.style.transform = "rotate(0deg) scale(1.01)";
+            ember.style.opacity = "0.2";
+            spark.style.opacity = "1";
+            content.style.opacity = "0";
+            footer.style.opacity = "0";
+          }
+        },
+        {
+          num: 5,
+          roman: "Phase V • Succession",
+          title: "Reveal • Mint Substrate Active",
+          desc: "The next priority note beneath—tinted in calming pastel mint—settles into primary focal elevation with a gentle 3.2px elastic rebound. Mind clarity is completely restored.",
+          haptic: "Dampened cushion thud at 55Hz: authentic paper landing on wooden desk surface.",
+          temp: "Serene Morning Light",
+          duration: "Instantaneous Focus",
+          applyActor: (actor, shadow, under, ember, spark, content, footer) => {
+            actor.style.transform = "translateY(0) scale(0)";
+            actor.style.opacity = "0";
+            shadow.style.transform = "scale(1)";
+            shadow.style.opacity = "0.12";
+            under.style.transform = "translateY(-4px) rotate(0deg) scale(1.02)";
+            under.style.boxShadow = "0 10px 24px rgba(68, 52, 38, 0.12)";
+            ember.style.opacity = "0";
+            spark.style.opacity = "0";
+            content.style.opacity = "0";
+            footer.style.opacity = "0";
+          }
+        }
+      ];
+
+      let currentStep = 0;
+      let intervalTimer = null;
+
+      const actor = document.getElementById("actor-note");
+      const shadow = document.getElementById("cast-shadow");
+      const under = document.getElementById("under-note");
+      const ember = document.getElementById("ember-overlay");
+      const spark = document.getElementById("spark-emitter");
+      const content = document.getElementById("actor-content");
+      const footer = document.getElementById("actor-footer");
+
+      const frameNumber = document.getElementById("frame-number");
+      const frameRoman = document.getElementById("frame-roman");
+      const frameTitle = document.getElementById("frame-title");
+      const frameDesc = document.getElementById("frame-desc");
+      const frameHaptic = document.getElementById("frame-haptic");
+      const frameTemp = document.getElementById("frame-temp");
+      const frameDuration = document.getElementById("frame-duration");
+
+      const dots = document.querySelectorAll(".step-dot");
+      const cards = document.querySelectorAll(".ritual-card");
+
+      function updateUI(index) {
+        currentStep = index;
+        const p = phases[index];
+
+        // Animate elements
+        p.applyActor(actor, shadow, under, ember, spark, content, footer);
+
+        // Text details update
+        frameNumber.textContent = p.num;
+        frameRoman.textContent = p.roman;
+        frameTitle.textContent = p.title;
+        frameDesc.textContent = p.desc;
+        frameHaptic.textContent = p.haptic;
+        
+        frameTemp.innerHTML = `<span class="material-symbols-outlined text-xs text-primary">wb_sunny</span><span>${p.temp}</span>`;
+        frameDuration.innerHTML = `<span class="material-symbols-outlined text-xs text-secondary">timer</span><span>${p.duration}</span>`;
+
+        // Update Stepper dots
+        dots.forEach((dot, idx) => {
+          if (idx === index) {
+            dot.classList.add("bg-primary", "w-6");
+            dot.classList.remove("bg-surface-container-highest", "w-2");
+          } else {
+            dot.classList.remove("bg-primary", "w-6");
+            dot.classList.add("bg-surface-container-highest", "w-2");
+          }
+        });
+
+        // Update Mosaic Cards selection
+        cards.forEach((card, idx) => {
+          if (idx === index) {
+            card.classList.add("border-primary", "bg-surface-container");
+            card.classList.remove("border-transparent", "bg-surface-container-low");
+          } else {
+            card.classList.remove("border-primary", "bg-surface-container");
+            card.classList.add("border-transparent", "bg-surface-container-low");
+          }
+        });
+      }
+
+      function nextStep() {
+        const next = (currentStep + 1) % phases.length;
+        updateUI(next);
+      }
+
+      function prevStep() {
+        const prev = (currentStep - 1 + phases.length) % phases.length;
+        updateUI(prev);
+      }
+
+      // Hook up controls
+      document.getElementById("btn-next").addEventListener("click", () => {
+        clearInterval(intervalTimer);
+        nextStep();
+      });
+
+      document.getElementById("btn-prev").addEventListener("click", () => {
+        clearInterval(intervalTimer);
+        prevStep();
+      });
+
+      document.getElementById("actor-action-btn").addEventListener("click", () => {
+        clearInterval(intervalTimer);
+        updateUI(1);
+      });
+
+      document.getElementById("btn-replay-single").addEventListener("click", () => {
+        const cached = currentStep;
+        updateUI(0);
+        setTimeout(() => updateUI(cached), 200);
+      });
+
+      document.getElementById("btn-play-sequence").addEventListener("click", () => {
+        clearInterval(intervalTimer);
+        let seq = 0;
+        updateUI(0);
+        intervalTimer = setInterval(() => {
+          seq++;
+          if (seq < phases.length) {
+            updateUI(seq);
+          } else {
+            clearInterval(intervalTimer);
+          }
+        }, 850);
+      });
+
+      dots.forEach((dot) => {
+        dot.addEventListener("click", (e) => {
+          clearInterval(intervalTimer);
+          const s = parseInt(e.currentTarget.getAttribute("data-step"), 10);
+          updateUI(s);
+        });
+      });
+
+      cards.forEach((card) => {
+        card.addEventListener("click", (e) => {
+          clearInterval(intervalTimer);
+          const s = parseInt(e.currentTarget.getAttribute("data-card-step"), 10);
+          updateUI(s);
+        });
+      });
+
+      // Initial state
+      updateUI(0);
+    })();
+  </script>
+</div></main><footer class="w-full py-space-lg text-center select-none"><div class="max-w-7xl mx-auto px-margin-mobile lg:px-margin flex items-center justify-center"><span class="font-label-sm text-label-sm text-tertiary tracking-widest uppercase opacity-60">Desk • Natural Light Focus</span></div></footer></body></html>

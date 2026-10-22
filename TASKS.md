@@ -47,7 +47,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   from a scratch script.
   Depends: T01
 
-- [ ] **T03 · `server` skeleton (Fastify)** — S
+- [x] **T03 · `server` skeleton (Fastify)** — S
   App factory + `GET /api/health` returning `{ok:true}`; dev script (tsx).
   **Done when:** `pnpm --filter server dev` boots; `curl /api/health` returns
   `{"ok":true}`.

@@ -8,3 +8,9 @@
 [tools]
 node = "24.22.1"
 pnpm = "12.15.0"
+
+# Convenience tasks — run with `mise run <task>`. Tasks execute with the
+# pinned toolchain above already on PATH, so no shims/activation needed.
+[tasks.dev]
+description = "Server dev process: Fastify via tsx watch (http://127.0.0.1:3000)"
+run = "pnpm --filter server dev"

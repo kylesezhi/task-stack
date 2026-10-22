@@ -2,3 +2,11 @@ packages:
   - shared
   - server
   - web
+
+# Packages allowed to run install scripts — pnpm blocks unruled builds by
+# default (supply-chain hardening; allowBuilds replaced the old
+# onlyBuiltDependencies list in pnpm 11). esbuild (used by tsx/vite/vitest)
+# needs its script to place the platform binary.
+allowBuilds:
+  esbuild: true
+

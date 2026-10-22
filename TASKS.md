@@ -40,7 +40,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   install` exits 0 and `pnpm -r ls` lists all three packages.
   Depends: —
 
-- [ ] **T02 · `shared` package with core types** — S
+- [x] **T02 · `shared` package with core types** — S
   TS package exporting `Stack`, `Note`, `CompletedNote`, `AppState` (shapes per
   `PLAN.md` data model) via `tsc` build.
   **Done when:** `pnpm --filter shared build` emits `dist/`; types import cleanly

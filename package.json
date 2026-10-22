@@ -7,5 +7,19 @@
   "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=24.15"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0 && prettier --check .",
+    "format": "eslint --fix . && prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.23.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-svelte": "^4.1.1",
+    "typescript-eslint": "^8.72.0"
   }
 }

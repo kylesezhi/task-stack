@@ -18,3 +18,11 @@ run = "pnpm --filter server dev"
 [tasks.web]
 description = "Web dev process: Vite (http://localhost:5173, /api proxied to the server)"
 run = "pnpm --filter web dev"
+
+[tasks.lint]
+description = "Lint + format check (ESLint + Prettier) across all packages"
+run = "pnpm lint"
+
+[tasks.format]
+description = "Auto-fix + format all packages"
+run = "pnpm format"

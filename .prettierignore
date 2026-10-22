@@ -1,0 +1,12 @@
+# Hand-wrapped planning docs stay hand-authored (code-only formatting)
+*.md
+
+# Third-party Stitch mockup output — never reformat
+reference/
+
+# Generated / build artifacts
+pnpm-lock.yaml
+# pnpm rewrites this file itself; keep Prettier from churning it
+pnpm-workspace.yaml
+**/dist/
+coverage/

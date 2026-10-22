@@ -12,8 +12,8 @@ export default defineConfig({
       // covers the /api/ws upgrade once WebSocket sync lands (T13).
       "/api": {
         target: "http://127.0.0.1:3000",
-        ws: true
-      }
-    }
-  }
+        ws: true,
+      },
+    },
+  },
 });

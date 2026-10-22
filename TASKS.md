@@ -60,7 +60,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   status fetched through the proxy.
   Depends: T01, T03
 
-- [ ] **T05 · Lint + format** — S
+- [x] **T05 · Lint + format** — S
   ESLint (flat config) + Prettier across all packages; root `lint`/`format`
   scripts.
   **Done when:** `pnpm lint` reports zero errors across all three packages.

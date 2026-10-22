@@ -32,7 +32,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 0 — Scaffold
 
-- [ ] **T01 · Initialize pnpm monorepo + mise toolchain** — S
+- [x] **T01 · Initialize pnpm monorepo + mise toolchain** — S
   `mise.toml` pinning `node` and `pnpm` (e.g. `node = "24"`, `pnpm = "12"`);
   root `package.json`, `pnpm-workspace.yaml` (`web`, `server`, `shared`),
   `.gitignore` (node_modules, dist, `server/data.db`, .env), `.editorconfig`.

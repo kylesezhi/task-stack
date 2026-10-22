@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local SQLite database — never commit
+server/data.db
+server/data.db-wal
+server/data.db-shm
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+coverage/
+
+# mise local overrides (personal, not shared)
+mise.local.toml
+
+# Logs & OS noise
+*.log
+.DS_Store

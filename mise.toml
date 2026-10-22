@@ -1,0 +1,10 @@
+# Toolchain for task-stack — mise is the only prerequisite (DECISIONS.md §11).
+# `mise install` provisions everything below; no global node/pnpm needed.
+#
+# node is pinned to an exact 24.x (>= 24.15) release because the server uses
+# the built-in node:sqlite module (DatabaseSync), release-candidate since
+# 24.15 — see DECISIONS.md §9. Exact pins keep CI and the Docker builder
+# (T36) reproducible.
+[tools]
+node = "24.22.1"
+pnpm = "12.15.0"

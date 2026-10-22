@@ -117,21 +117,18 @@ per note via `colorIndex(id)` — variety without pickers.
 task-stack/
 ├── DECISIONS.md · PLAN.md · README.md · LICENSE (MIT)
 ├── mise.toml      # pinned toolchain: node + pnpm — mise is the only prerequisite
-├── package.json (pnpm workspaces) · .github/workflows/ci.yml
+├── package.json (pnpm workspaces)
 ├── shared/        # TS types + pure logic (ordering, tilt/color), consumed by web+server
 ├── server/        # Fastify + node:sqlite (built-in) + WS; serves web/dist in production
 └── web/           # Svelte 5 + Vite; hand-written CSS; e2e tests live here (Playwright)
 ```
-
-CI (GitHub Actions): typecheck → lint → vitest (server + shared) → build web →
-Playwright smoke against a real server instance.
 
 ## Milestones
 
 **M0 — scaffold (repo boots)**
 mise.toml toolchain (node + pnpm); pnpm workspaces; Vite+Svelte 5+TS in
 `web/`; Fastify skeleton + one route in
-`server/`; `shared/` types; vitest harness; ESLint/Prettier; CI; README stub
+`server/`; `shared/` types; vitest harness; ESLint/Prettier; README stub
 (name, credit-to-article note, MIT). Deliverable: `pnpm dev` serves a hello
 stack view from a real server.
 
@@ -167,7 +164,7 @@ open server: noindex header, origin never written into repo files.
 Reminders, due dates, calendars, recurring tasks (philosophically unstackable);
 tags/search; undo; auth/multi-user; sharing; offline support; PWA install;
 dark mode (theme tokens ready, theme ships later); per-stack friction
-("display" stacks — dropped; revisit only if daily use demands it).
+("display" stacks — dropped; revisit only if daily use demands it); CI pipeline.
 
 ## Deferred ideas (parked, not planned)
 

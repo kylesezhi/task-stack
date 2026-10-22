@@ -82,7 +82,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   tables and their columns exist.
   Depends: T03
 
-- [ ] **T08 · Payload validation (zod, in `shared`)** — S
+- [x] **T08 · Payload validation (zod, in `shared`)** — S
   Schemas for every API body: create/rename stack, push note, edit text,
   reorder (array of ids), set active.
   **Done when:** `shared` unit tests accept valid samples and reject malformed

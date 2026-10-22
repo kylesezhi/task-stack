@@ -1,0 +1,12 @@
+/* Global reset only — the paper aesthetic and its design tokens arrive with
+ * Phase 3 (T25). Keep this file lean until then. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}

@@ -14,3 +14,7 @@ pnpm = "12.15.0"
 [tasks.dev]
 description = "Server dev process: Fastify via tsx watch (http://127.0.0.1:3000)"
 run = "pnpm --filter server dev"
+
+[tasks.web]
+description = "Web dev process: Vite (http://localhost:5173, /api proxied to the server)"
+run = "pnpm --filter web dev"

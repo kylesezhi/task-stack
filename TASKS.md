@@ -53,7 +53,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   `{"ok":true}`.
   Depends: T01
 
-- [ ] **T04 · `web` skeleton (Svelte 5 + Vite)** — S
+- [x] **T04 · `web` skeleton (Svelte 5 + Vite)** — S
   Vite + Svelte 5 + TS app; dev proxy `/api` → server; stub component fetches
   `/api/health` and shows the result.
   **Done when:** `pnpm --filter web dev` serves a page displaying the health

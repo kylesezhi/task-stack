@@ -13,6 +13,8 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 - Sizes: **S** ≈ under an hour · **M** ≈ half a day.
 - Phases are ordered (phase N needs phase N−1); `Depends` lists task-level
   prerequisites within/between phases.
+- Toolchain: **mise is the only prerequisite** — `mise install` provisions the
+  pinned node + pnpm from `mise.toml`.
 - External inputs (things only you can provide) are flagged ⚠.
 
 ## Task index
@@ -30,10 +32,12 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 0 — Scaffold
 
-- [ ] **T01 · Initialize pnpm monorepo** — S
-  Root `package.json`, `pnpm-workspace.yaml` (`web`, `server`, `shared`),
+- [ ] **T01 · Initialize pnpm monorepo + mise toolchain** — S
+  `mise.toml` pinning `node` and `pnpm` (e.g. `node = "24"`, `pnpm = "12"`);
+  root `package.json`, `pnpm-workspace.yaml` (`web`, `server`, `shared`),
   `.gitignore` (node_modules, dist, `server/data.db`, .env), `.editorconfig`.
-  **Done when:** `pnpm install` exits 0 and `pnpm -r ls` lists all three packages.
+  **Done when:** on a machine with only mise installed, `mise install && pnpm
+  install` exits 0 and `pnpm -r ls` lists all three packages.
   Depends: —
 
 - [ ] **T02 · `shared` package with core types** — S
@@ -68,7 +72,8 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   Depends: T02, T03
 
 - [ ] **T07 · CI pipeline** — M ⚠ (assumes GitHub; adjust if hosted elsewhere)
-  GitHub Actions on push/PR: pnpm install (cached), typecheck (`tsc --noEmit`
+  GitHub Actions on push/PR: `jdx/mise-action` installs the pinned toolchain
+  from `mise.toml` (cached), then pnpm install, typecheck (`tsc --noEmit`
   everywhere), lint, unit tests, build all packages.
   **Done when:** a trivial commit produces a green pipeline covering typecheck,
   lint, tests, build.

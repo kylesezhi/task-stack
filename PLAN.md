@@ -116,6 +116,7 @@ per note via `colorIndex(id)` — variety without pickers.
 ```
 task-stack/
 ├── DECISIONS.md · PLAN.md · README.md · LICENSE (MIT)
+├── mise.toml      # pinned toolchain: node + pnpm — mise is the only prerequisite
 ├── package.json (pnpm workspaces) · .github/workflows/ci.yml
 ├── shared/        # TS types + pure logic (ordering, tilt/color), consumed by web+server
 ├── server/        # Fastify + better-sqlite3 + WS; serves web/dist in production
@@ -128,7 +129,8 @@ Playwright smoke against a real server instance.
 ## Milestones
 
 **M0 — scaffold (repo boots)**
-pnpm workspaces; Vite+Svelte 5+TS in `web/`; Fastify skeleton + one route in
+mise.toml toolchain (node + pnpm); pnpm workspaces; Vite+Svelte 5+TS in
+`web/`; Fastify skeleton + one route in
 `server/`; `shared/` types; vitest harness; ESLint/Prettier; CI; README stub
 (name, credit-to-article note, MIT). Deliverable: `pnpm dev` serves a hello
 stack view from a real server.

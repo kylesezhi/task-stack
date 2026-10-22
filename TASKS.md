@@ -73,7 +73,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 1 — Server mechanics
 
-- [ ] **T07 · SQLite + schema (`node:sqlite`)** — M
+- [x] **T07 · SQLite + schema (`node:sqlite`)** — M
   Built-in `node:sqlite` module (`DatabaseSync` — no third-party driver, needs
   Node ≥ 24.15 per `mise.toml`); DB path via env (`server/data.db` default);
   on boot create tables per `PLAN.md` (stacks, notes, completed_notes,

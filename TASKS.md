@@ -66,7 +66,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** `pnpm lint` reports zero errors across all three packages.
   Depends: T02, T03, T04
 
-- [ ] **T06 · Vitest harness** — S
+- [x] **T06 · Vitest harness** — S
   Vitest configured in `shared` and `server`; one trivial passing test each.
   **Done when:** `pnpm -r test` is green.
   Depends: T02, T03

@@ -26,3 +26,7 @@ run = "pnpm lint"
 [tasks.format]
 description = "Auto-fix + format all packages"
 run = "pnpm format"
+
+[tasks.test]
+description = "Unit tests (Vitest) in shared + server"
+run = "pnpm -r test"

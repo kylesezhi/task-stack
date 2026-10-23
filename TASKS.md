@@ -96,7 +96,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   expected JSON.
   Depends: T07
 
-- [ ] **T10 · Stack routes** — M
+- [x] **T10 · Stack routes** — M
   `POST /api/stacks` (create + make active), `PATCH /api/stacks/:id` (name,
   drawer position), `DELETE /api/stacks/:id` (pending notes deleted; completed
   rows persist with `stack_name`), `PUT /api/active`.

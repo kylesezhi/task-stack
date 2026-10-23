@@ -132,7 +132,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   everything `/api/state` does.
   Depends: T09
 
-- [ ] **T14 · Serve built web in production mode** — S
+- [x] **T14 · Serve built web in production mode** — S
   `@fastify/static` serving `web/dist` at `/`; port/host via env.
   **Done when:** `pnpm -r build && node server/dist/index.js` serves the built
   app with working `/api` routes in one process.

@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fastify/static": "^10.1.7",
     "@fastify/websocket": "^11.3.4",
     "@task-stack/shared": "workspace:*",
     "fastify": "^5.12.7",

@@ -1,7 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
+import { existsSync } from "node:fs";
 import { fastify, type FastifyInstance } from "fastify";
 import { registerExportRoute } from "./export.js";
 import { getAppState } from "./state.js";
+import { registerStatic, webDistPathFromEnv } from "./static.js";
 import { registerWs } from "./ws.js";
 import { registerStackRoutes } from "./stacks.js";
 import { registerNoteRoutes } from "./notes.js";
@@ -15,6 +17,17 @@ export interface BuildAppOptions {
   db: DatabaseSync;
   /** Pino logging on/off. Off by default so tests and CI stay quiet. */
   logger?: boolean;
+  /**
+   * Web dist root to serve at `/` (T14 production mode). Explicit wins —
+   * tests inject fixture dirs, and T36's Docker image points at wherever
+   * web/dist lands inside the image (the WEB_DIST_PATH env does the same
+   * job for ops). Unset → WEB_DIST_PATH env, else the module-relative
+   * default (static.ts) — and when that default directory does not exist
+   * (an API-only checkout, no `pnpm -r build` yet) static serving is
+   * skipped entirely: the API still boots, and the dev-time UI is vite's
+   * own server anyway.
+   */
+  webDist?: string;
 }
 
 /**
@@ -59,5 +72,15 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // delivers to every other socket (via registerWs's onSend hook above).
   registerStackRoutes(app, db);
   registerNoteRoutes(app, db);
+
+  // Static serving registers LAST, after every literal /api route — the
+  // wildcard is the catch-all sink, and find-my-way prefers literals anyway,
+  // so the API keeps matching. An explicit root is served as given (a caller
+  // naming a missing directory should fail loudly, not get a silent API-only
+  // server); the resolved default only when the build actually exists.
+  const webDist = options.webDist ?? webDistPathFromEnv();
+  if (options.webDist !== undefined || existsSync(webDist)) {
+    await registerStatic(app, webDist);
+  }
   return app;
 }

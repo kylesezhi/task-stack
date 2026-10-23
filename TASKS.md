@@ -116,7 +116,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   ids.
   Depends: T08, T09
 
-- [ ] **T12 · WebSocket sync** — M
+- [x] **T12 · WebSocket sync** — M
   `/api/ws`: send full state on connect; after every mutation broadcast the
   fresh full state to **all** connected sockets; mutation HTTP responses also
   return the snapshot.

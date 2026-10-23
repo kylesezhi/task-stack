@@ -11,11 +11,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fastify/websocket": "^11.3.4",
     "@task-stack/shared": "workspace:*",
-    "fastify": "^5.12.7"
+    "fastify": "^5.12.7",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "@types/ws": "^8.18.2",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.5"

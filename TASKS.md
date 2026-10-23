@@ -125,7 +125,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   broadcasts.
   Depends: T09, T10, T11
 
-- [ ] **T13 · Export + noindex header** — S
+- [x] **T13 · Export + noindex header** — S
   `GET /api/export` (full dump: stacks, notes, completed); `X-Robots-Tag:
   noindex` on server responses (open server hygiene per `DECISIONS.md` §9).
   **Done when:** `curl -I` shows the header; a test verifies export contains

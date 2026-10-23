@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { fastify, type FastifyInstance } from "fastify";
+import { registerExportRoute } from "./export.js";
 import { getAppState } from "./state.js";
 import { registerWs } from "./ws.js";
 import { registerStackRoutes } from "./stacks.js";
@@ -24,8 +25,26 @@ export interface BuildAppOptions {
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
   const { db, logger = false } = options;
   const app = fastify({ logger });
+
+  // Open-server hygiene (DECISIONS.md §9): every response declares
+  // X-Robots-Tag: noindex so a crawler that stumbles onto the URL indexes
+  // nothing. The deployment is intentionally unauthenticated (§9 — single
+  // user, open to anyone holding the URL); the URL staying out of search
+  // engines is part of that deal. Registered before ANY route — Fastify
+  // app-level hooks reliably cover routes registered after them, so first
+  // thing in the factory is the only placement that provably reaches /api/health
+  // and /api/state too. onSend (not onRequest) so it sits at the same
+  // lifecycle point as ws.ts's broadcast hook — one home for cross-cutting
+  // response concerns — and so headers set here land on the final wire
+  // response, errors included.
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("X-Robots-Tag", "noindex");
+    return payload;
+  });
+
   app.get("/api/health", async () => ({ ok: true }));
   app.get("/api/state", async () => getAppState(db));
+  registerExportRoute(app, db);
 
   // WS sync (PLAN.md "WebSocket sync", DECISIONS.md §9) registers before the
   // mutation routes so its app-level onSend hook provably applies to every

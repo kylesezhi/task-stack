@@ -4,10 +4,10 @@ import { dbPathFromEnv, openDatabase } from "./db.js";
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "127.0.0.1";
 
-const app = await buildApp({ logger: true });
-
 const dbPath = dbPathFromEnv(); // DB_PATH env wins, else module-relative server/data.db
 const db = openDatabase(dbPath);
+
+const app = await buildApp({ db, logger: true });
 
 // Graceful shutdown — finish in-flight requests before exiting (Docker sends
 // SIGTERM on stop/restart; see T36/T37). app.close() runs first, then

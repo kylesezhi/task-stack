@@ -89,7 +89,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   ones (empty text, wrong types).
   Depends: T02
 
-- [ ] **T09 · `GET /api/state` snapshot** — M
+- [x] **T09 · `GET /api/state` snapshot** — M
   Returns `{ activeStackId, stacks[], notes[], completed[] }`: stacks by
   position, notes by position ascending (1 = top), completed newest first.
   **Done when:** integration test with a seeded fixture DB returns the exact

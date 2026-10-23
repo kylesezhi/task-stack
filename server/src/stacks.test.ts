@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AppState } from "@task-stack/shared";
 import { buildApp } from "./app.js";
 import { openDatabase } from "./db.js";
-import { withTransaction } from "./stacks.js";
+import { withTransaction } from "./db.js";
 
 // Integration tests for the T10 stack routes, against real file DBs (never
 // :memory:), seeded with raw SQL and fixed ISO timestamps so every expected

@@ -105,7 +105,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   switching active updates settings.
   Depends: T08, T09
 
-- [ ] **T11 · Note routes** — M
+- [x] **T11 · Note routes** — M
   `POST /api/stacks/:id/notes` (push at position 1 in one transaction, others
   shift), `PATCH /api/notes/:id` (edit text), `DELETE /api/notes/:id` (toss),
   `POST /api/notes/:id/complete` (move to completed_notes with `stack_name` +

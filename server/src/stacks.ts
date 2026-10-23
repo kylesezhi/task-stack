@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { CreateStackSchema, SetActiveStackSchema, UpdateStackSchema } from "@task-stack/shared";
+import { withTransaction } from "./db.js";
+import { firstIssueMessage, sendError } from "./errors.js";
 import { getAppState } from "./state.js";
 
 /** Settings row key that names the globally active stack (PLAN.md data model). */
@@ -9,67 +11,6 @@ const ACTIVE_STACK_ID_KEY = "active_stack_id";
 
 /** node:sqlite row shape — all typed conversions are explicit at the boundary. */
 type Row = Record<string, number | bigint | string | null | Uint8Array>;
-
-/**
- * The error contract shared by every route below (T11 follows suit): a plain
- * `{ error: "<human-readable message>" }` body with a 400 (validation: the
- * first zod issue's message, verbatim) or 404 status. Fastify's not-found
- * handler and JSON-schema validation stay untouched — bodies are validated
- * with manual `safeParse` so shared/ remains the single source of the rules.
- */
-function sendError(reply: FastifyReply, status: 400 | 404, message: string): FastifyReply {
-  return reply.code(status).send({ error: message });
-}
-
-/** A failed safeParse always carries ≥1 issue; only an empty `issues` array —
- * structurally impossible for zod — falls back to a generic message. */
-function firstIssueMessage(issues: readonly { message: string }[]): string {
-  const first = issues[0];
-  return first === undefined ? "Invalid request body" : first.message;
-}
-
-/**
- * Runs `fn` inside one SQLite transaction. node:sqlite's DatabaseSync has no
- * transaction API — BEGIN/COMMIT/ROLLBACK via exec is the way. fn MUST be
- * synchronous: one withTransaction covers a fixed, fully-executed statement
- * block. An async fn would escape the COMMIT (below), so a thenable result is
- * detected and rejected loudly instead of losing atomicity silently. Sound
- * because every statement between BEGIN and COMMIT is synchronous: an
- * exception can only leave the transaction open if ROLLBACK itself throws,
- * and the most common reason for that (transaction already terminated) is
- * exactly the case where nothing is left open. The original error is
- * re-thrown either way.
- */
-export function withTransaction<T>(db: DatabaseSync, fn: () => T): T {
-  db.exec("BEGIN");
-  try {
-    const result = fn();
-    if (
-      result !== undefined &&
-      result !== null &&
-      typeof (result as { then?: unknown }).then === "function"
-    ) {
-      // Statements already ran inside the transaction — undo them, then fail
-      // loudly: an async callback would escape the COMMIT below, and its
-      // awaited DB work would land OUTSIDE the (already committed) block.
-      db.exec("ROLLBACK");
-      throw new TypeError(
-        "withTransaction requires a synchronous callback: an async callback would " +
-          "escape the COMMIT and its DB work would land outside the transaction",
-      );
-    }
-    db.exec("COMMIT");
-    return result;
-  } catch (err) {
-    try {
-      db.exec("ROLLBACK");
-    } catch {
-      // Nothing to roll back (or the connection is already broken) —
-      // re-throw the original error, which is the informative one.
-    }
-    throw err;
-  }
-}
 
 /**
  * Upserts the active-stack pointer. A single statement (atomic on its own) —

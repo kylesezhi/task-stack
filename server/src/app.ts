@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { fastify, type FastifyInstance } from "fastify";
 import { registerExportRoute } from "./export.js";
 import { getAppState } from "./state.js";
-import { registerStatic, webDistPathFromEnv } from "./static.js";
+import { registerStatic, resolveWebDistRoot } from "./static.js";
 import { registerWs } from "./ws.js";
 import { registerStackRoutes } from "./stacks.js";
 import { registerNoteRoutes } from "./notes.js";
@@ -21,11 +21,15 @@ export interface BuildAppOptions {
    * Web dist root to serve at `/` (T14 production mode). Explicit wins —
    * tests inject fixture dirs, and T36's Docker image points at wherever
    * web/dist lands inside the image (the WEB_DIST_PATH env does the same
-   * job for ops). Unset → WEB_DIST_PATH env, else the module-relative
-   * default (static.ts) — and when that default directory does not exist
-   * (an API-only checkout, no `pnpm -r build` yet) static serving is
-   * skipped entirely: the API still boots, and the dev-time UI is vite's
-   * own server anyway.
+   * job for ops). CONFIGURED values (this option or WEB_DIST_PATH) are
+   * validated loudly in buildApp: a set-but-missing path and a set-but-empty
+   * one ("" or whitespace — resolve("") would mean process.cwd(), i.e.
+   * serving the whole repo shell life data.db included, DECISIONS.md §9)
+   * both throw an Error naming the value's source. Unset → WEB_DIST_PATH
+   * env, else the module-relative default (static.ts) — and when that
+   * default directory does not exist (an API-only checkout, no
+   * `pnpm -r build` yet) static serving is skipped instead: the API still
+   * boots, and the dev-time UI is vite's own server anyway.
    */
   webDist?: string;
 }
@@ -75,12 +79,38 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Static serving registers LAST, after every literal /api route — the
   // wildcard is the catch-all sink, and find-my-way prefers literals anyway,
-  // so the API keeps matching. An explicit root is served as given (a caller
-  // naming a missing directory should fail loudly, not get a silent API-only
-  // server); the resolved default only when the build actually exists.
-  const webDist = options.webDist ?? webDistPathFromEnv();
-  if (options.webDist !== undefined || existsSync(webDist)) {
-    await registerStatic(app, webDist);
+  // so the API keeps matching. resolveWebDistRoot classifies the input (its
+  // `root`, when present, is always absolute — relative values like the
+  // natural `WEB_DIST_PATH=web/dist` are resolved by the resolver and SERVE);
+  // buildApp is the single enforcement point for the matrix:
+  // - configured + missing → loud startup error. app.ts must catch this
+  //   itself because @fastify/static's checkPath only WARNS on a missing
+  //   root: the wildcard still registers and / would 404 forever — a quiet
+  //   malfunction instead of an actionable failure.
+  // - configured + empty/whitespace → loud startup error (an accidental
+  //   process.cwd() root would expose server/data.db at /; DECISIONS.md §9).
+  // - configured + present → serve (the resolver already made it absolute).
+  // - default + present → serve, exactly the production flow.
+  // - default + missing → skip static entirely (fresh API-only checkout;
+  //   the dev UI is vite's own server) — the API-only boot must not die on
+  //   an optional artifact that just hasn't been built yet.
+  const webDist = resolveWebDistRoot(options.webDist);
+  switch (webDist.kind) {
+    case "invalid":
+      throw new Error(`web dist path is empty (set via ${webDist.source})`);
+    case "configured":
+      if (!existsSync(webDist.root)) {
+        throw new Error(
+          `web dist directory not found: ${webDist.root} (set via ${webDist.source})`,
+        );
+      }
+      await registerStatic(app, webDist.root);
+      break;
+    case "default":
+      if (existsSync(webDist.root)) {
+        await registerStatic(app, webDist.root);
+      }
+      break;
   }
   return app;
 }

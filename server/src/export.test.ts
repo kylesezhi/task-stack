@@ -102,8 +102,10 @@ describe("GET /api/export", () => {
       expect(dump.stacks).toEqual(state.stacks);
       expect(dump.notes).toEqual(state.notes);
       expect(dump.completed).toEqual(state.completed);
-      // Provenance is a canonical ISO-8601 UTC timestamp.
-      expect(Number.isNaN(Date.parse(dump.exportedAt))).toBe(false);
+      // Provenance is a canonical ISO-8601 UTC timestamp: Date.parse accepts
+      // far too much ("2024", "March 3 2024"), so the shape itself is the
+      // assertion — `toISOString()`'s fixed `YYYY-MM-DDTHH:MM:SS.mmmZ`.
+      expect(dump.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
       // Exactly the state keys plus exportedAt — no extra drift either way.
       expect(Object.keys(dump).sort()).toEqual([
         "activeStackId",
@@ -128,7 +130,7 @@ describe("GET /api/export", () => {
       expect(dump.stacks).toEqual([]);
       expect(dump.notes).toEqual([]);
       expect(dump.completed).toEqual([]);
-      expect(Number.isNaN(Date.parse(dump.exportedAt))).toBe(false);
+      expect(dump.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     } finally {
       await app.close();
     }
@@ -157,6 +159,24 @@ describe("X-Robots-Tag: noindex (DECISIONS.md §9)", () => {
       method: "PATCH",
       url: "/api/stacks/ghost",
       payload: { name: "X" },
+      expected: 404,
+    },
+    {
+      label: "POST /api/stacks with invalid body (error, 400)",
+      method: "POST",
+      url: "/api/stacks",
+      payload: {},
+      expected: 400,
+    },
+    {
+      // Unmatched route → a plain 404 carries the app-level header too.
+      // Without a webDist this serves nothing static, so the APP's not-found
+      // handler answers; static.test.ts proves the @fastify/static wildcard
+      // 404 path carries the same header on a serving app — either 404
+      // source lands on the header either way.
+      label: "GET unmatched path (error, 404)",
+      method: "GET",
+      url: "/definitely-not-a-route",
       expected: 404,
     },
   ] as const;

@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
@@ -17,13 +17,57 @@ export interface WebDistEnv {
 }
 
 /**
- * Resolves the web dist directory: explicit WEB_DIST_PATH wins (absolute or
- * cwd-relative — used as given; T36's Docker image will point it at wherever
- * web/dist lands inside the image), else the module-relative default. Pure,
- * mirroring dbPathFromEnv.
+ * How the web dist root was decided:
+ * - `configured` — an explicit source (the `webDist` option or the
+ *   WEB_DIST_PATH env) named an existing value (trimmed-nonempty);
+ *   app.ts treats configured-but-missing as a loud startup error.
+ * - `invalid` — a configured source was SET but its value is empty or all
+ *   whitespace. Reported loudly by app.ts, never silently ignored: resolve("")
+ *   and resolve("   ") both return process.cwd() (path.resolve does not trim),
+ *   so treating an empty configured value as a path would serve the ENTIRE
+ *   working directory at / — data.db and all — an open-server data-exposure
+ *   bug (DECISIONS.md §9). An operator who set the variable must get the
+ *   error, not an accidental default.
+ * - `default` — the module-relative fallback; missing there just means "no
+ *   web build yet" (fresh checkout) and static serving is skipped.
  */
-export function webDistPathFromEnv(env: WebDistEnv = process.env): string {
-  return env.WEB_DIST_PATH ?? DEFAULT_WEB_DIST_PATH;
+export type WebDistRoot =
+  | { kind: "configured"; source: "webDist option" | "WEB_DIST_PATH env"; root: string }
+  | { kind: "invalid"; source: "webDist option" | "WEB_DIST_PATH env" }
+  | { kind: "default"; root: string };
+
+/**
+ * Pure planner for the web dist root (app.ts consumes it — the single
+ * enforcement point; nothing throws here). Precedence: `webDist` option →
+ * WEB_DIST_PATH env → module-relative default. A configured `root` is ALWAYS
+ * absolute — @fastify/static's checkPath rejects a relative root with
+ * FST_STATIC_INVALID_OPTION, so relative values (the natural
+ * `WEB_DIST_PATH=web/dist`) are resolved against process.cwd() here, before
+ * the plugin can reject them. A trimmed-empty configured value yields the
+ * `invalid` kind instead (see the WebDistRoot doc for why "set but empty" is
+ * a loud error rather than a silent unset). The kinds let app.ts enforce
+ * different rules per branch rather than sniffing which input was set.
+ * `defaultRoot` is injectable so tests can prove default-missing behavior
+ * without depending on whether a real `pnpm -r build` ran on this machine.
+ */
+export function resolveWebDistRoot(
+  explicit: string | undefined,
+  env: WebDistEnv = process.env,
+  defaultRoot: string = DEFAULT_WEB_DIST_PATH,
+): WebDistRoot {
+  if (explicit !== undefined) {
+    if (explicit.trim() === "") {
+      return { kind: "invalid", source: "webDist option" };
+    }
+    return { kind: "configured", source: "webDist option", root: resolve(explicit) };
+  }
+  if (env.WEB_DIST_PATH !== undefined) {
+    if (env.WEB_DIST_PATH.trim() === "") {
+      return { kind: "invalid", source: "WEB_DIST_PATH env" };
+    }
+    return { kind: "configured", source: "WEB_DIST_PATH env", root: resolve(env.WEB_DIST_PATH) };
+  }
+  return { kind: "default", root: resolve(defaultRoot) };
 }
 
 /**

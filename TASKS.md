@@ -147,7 +147,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   real server updates the store.
   Depends: T12
 
-- [ ] **T16 · View state machine + app shell** — S
+- [x] **T16 · View state machine + app shell** — S
   Views: `firstRun | stack | list | drawer | archive`; nav wiring with
   placeholder components; Esc closes overlays.
   **Done when:** switching between placeholder views works; Esc behavior

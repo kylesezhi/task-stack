@@ -1,116 +1,97 @@
 <script lang="ts">
   /**
-   * T15 smoke surface — temporary by design; replaced by the real T16/T18
-   * views. It proves the state client end to end (connect, snapshot, push
-   * mutation) and intentionally does NO design work (Phase 3 owns visuals).
+   * App shell (T16; sources: TASKS.md T16, DESIGN.md §5.1–5.6, DECISIONS.md
+   * §3/§11). Exactly one view at a time, resolved by the view machine in
+   * lib/view.ts over the server snapshot in lib/store.ts:
+   * - no snapshot yet: the quiet T15 connecting placeholder;
+   * - no stacks: FirstRunView alone, no chrome (§5.5) — entered and left only
+   *   by server truth, never by navigation;
+   * - otherwise: StackView always mounted as the desk, with at most one
+   *   overlay sheet rendered on top (kept mounted so overlays slide over the
+   *   desk — §5.3/§5.4 — and StackView's local state survives underneath).
+   * Esc closes whatever overlay is open. Visual design starts with Phase 3
+   * (T23+); this is mechanics with the least CSS that shows the layering.
    */
-  import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
-  import { pushNote, snapshot, status } from "./lib/store";
+  import { snapshot, status } from "./lib/store";
+  import { view, closeOverlay } from "./lib/view";
+  import ArchiveView from "./views/ArchiveView.svelte";
+  import FirstRunView from "./views/FirstRunView.svelte";
+  import ListView from "./views/ListView.svelte";
+  import StacksDrawer from "./views/StacksDrawer.svelte";
+  import StackView from "./views/StackView.svelte";
 
-  let text = $state("");
-  /** Last mutation failure, shown inline; cleared on the next attempt. */
-  let pushError: string | null = $state(null);
-
-  const activeStackId = $derived($snapshot?.activeStackId ?? null);
-  const activeStack = $derived(
-    $snapshot?.stacks.find((stack) => stack.id === activeStackId) ?? null,
-  );
-  // Snapshot notes are ordered position-ascending (1 = top), so index 0 is
-  // the top note of the active stack.
-  const activeNotes = $derived(
-    $snapshot?.notes.filter((note) => note.stackId === activeStackId) ?? [],
-  );
-  const topNote = $derived(activeNotes[0] ?? null);
-
-  async function onPush(event: SubmitEvent): Promise<void> {
-    event.preventDefault(); // a form submit must not reload the page
-    const stackId = activeStackId;
-    if (stackId === null || text.trim() === "") return; // mirrored in the disabled state below
-    pushError = null;
-    const result = await pushNote(stackId, text);
-    if (result.ok) {
-      text = ""; // clear only on success so a failed push keeps its text
-    } else {
-      pushError = result.error;
-    }
+  function onKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") closeOverlay();
+    // Input-aware Esc (clear a focused input instead of closing) is
+    // deliberately deferred to T18/T33 — this shell has no inputs yet.
+    // The svelte:window keydown → closeOverlay() binding itself is exercised
+    // by T22's Playwright e2e (approved plan); T16 verifies the machine
+    // semantics via unit tests.
   }
 </script>
 
-<main>
-  <h1>task-stack</h1>
-  <p class="status">Status: {$status}</p>
+<svelte:window onkeydown={onKeydown} />
 
-  {#if $snapshot === null}
-    {#if $status !== "online"}
-      <p class="quiet">Connecting…</p>
-    {:else}
-      <p class="quiet">Waiting for the server snapshot…</p>
-    {/if}
+{#if $snapshot === null}
+  {#if $status !== "online"}
+    <main class="connecting"><p class="quiet">Connecting…</p></main>
   {:else}
-    {@const snap = $snapshot}
-    <section>
-      <p>
-        Active stack:
-        {snap.activeStackId === null ? "no stacks yet" : (activeStack?.name ?? "unknown")}
-      </p>
-      <ul>
-        {#each snap.stacks as stack (stack.id)}
-          {@const count = snap.notes.filter((note) => note.stackId === stack.id).length}
-          <li>{stack.name} — {count} {count === 1 ? "note" : "notes"}</li>
-        {/each}
-      </ul>
-      {#if topNote}
-        <p>Top note: {topNote.text}</p>
-      {/if}
-      <p>Completed: {snap.completed.length}</p>
-
-      <form onsubmit={onPush}>
-        <input
-          bind:value={text}
-          maxlength={NOTE_TEXT_MAX_LENGTH}
-          placeholder="Push a note onto the stack…"
-          aria-label="New note text"
-        />
-        <button type="submit" disabled={activeStackId === null || text.trim() === ""}>
-          Push
-        </button>
-      </form>
-      {#if pushError}
-        <p class="error">{pushError}</p>
-      {/if}
-    </section>
+    <main class="connecting"><p class="quiet">Waiting for the server snapshot…</p></main>
   {/if}
-</main>
+{:else if $view === "firstRun"}
+  <FirstRunView />
+{:else}
+  <StackView />
+  {#if $view === "list"}
+    <ListView />
+  {:else if $view === "drawer"}
+    <StacksDrawer />
+  {:else if $view === "archive"}
+    <ArchiveView />
+  {/if}
+{/if}
+
+{#if $snapshot !== null && $status !== "online"}
+  <!-- Online-only app: be honest about disconnects wherever the user is,
+       including inside an open overlay (fixed strip above the sheets).
+       Tradeoff (T16): the strip is translucent and pointer-transparent so the
+       Close/top-nav controls beneath stay usable with mouse and touch —
+       bottom placement would collide with "See all N" and T28's pinned mobile
+       input, and reserving conditional top space would couple body layout to
+       a transient state. Phase 3 (T33) owns the real chrome/disconnect
+       treatment; the T16 requirement is honesty without disabling controls. -->
+  <p class="connection">
+    {$status === "connecting"
+      ? "Reaching for the server…"
+      : "The server went quiet — picking the connection back up"}
+  </p>
+{/if}
 
 <style>
-  main {
+  .connecting {
     min-height: 100vh;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    font-family: system-ui, sans-serif;
   }
 
-  h1 {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-
-  .status,
-  .quiet,
-  .error {
-    margin: 0;
+  .quiet {
     color: #555;
   }
 
-  .error {
-    color: #a33;
-  }
-
-  form {
-    display: flex;
-    gap: 0.5rem;
+  .connection {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20; /* above the overlay sheets (z-index 10 in app.css) */
+    /* Clicks must pass through to the controls beneath (tradeoff above) —
+     * an opaque blocking strip would disable Close and the top chrome. */
+    pointer-events: none;
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    text-align: center;
+    color: #555;
+    background: rgba(245, 241, 232, 0.9);
   }
 </style>

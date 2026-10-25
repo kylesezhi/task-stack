@@ -10,3 +10,15 @@
 body {
   margin: 0;
 }
+
+/* T16 mechanics shell: overlays cover the desk as fixed full-viewport sheets
+ * so the closed/open state is actually visible without any design work (the
+ * real paper sheets are T32; details are Phase 3's). The connection note in
+ * App.svelte rides at a higher z-index. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  background: #fff;
+}

@@ -140,7 +140,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 2 — Web mechanics (unstyled)
 
-- [ ] **T15 · State client** — M
+- [x] **T15 · State client** — M
   WS + REST client: connect, reconnect with backoff, expose the snapshot as a
   reactive store, mutation helpers.
   **Done when:** unit tests against a mocked WS pass; manual smoke against the

@@ -30,3 +30,14 @@ run = "pnpm format"
 [tasks.test]
 description = "Unit tests (Vitest) in shared + server"
 run = "pnpm -r test"
+
+# Playwright browser binaries live outside the repo (~/.cache/ms-playwright)
+# and are the one thing `mise install` does not provision — hence the split:
+# e2e-install is the explicit once-per-machine step, e2e stays a clean run.
+[tasks.e2e]
+description = "Playwright e2e suite (web/tests/e2e) — self-contained: boots a throwaway server + Vite with a fresh DB"
+run = "pnpm --filter web test:e2e"
+
+[tasks.e2e-install]
+description = "Once per machine: install Playwright's Chromium for the e2e suite"
+run = "pnpm --filter web exec playwright install chromium"

@@ -22,9 +22,12 @@
 
   function onKeydown(event: KeyboardEvent): void {
     if (event.key === "Escape") closeOverlay();
-    // Input-aware Esc (clear a focused input instead of closing) is
-    // deliberately deferred to T18/T33 — FirstRunView's create input (T17)
-    // has no overlay and StackView's quick-add arrives with T18.
+    // Input-aware Esc for StackView's quick-add/edit inputs landed with T18:
+    // those inputs handle and consume Escape themselves (clear draft /
+    // cancel edit) and stopPropagation, so the window handler below only
+    // sees Esc pressed outside an editing input. T33 owns the remaining
+    // keyboard polish: `/` focuses the input, aria-live announcements, and
+    // the full keyboard-only/axe pass.
     // The svelte:window keydown → closeOverlay() binding itself is exercised
     // by T22's Playwright e2e (approved plan); T16 verifies the machine
     // semantics via unit tests.

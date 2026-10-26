@@ -161,7 +161,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   state has exactly one active stack.
   Depends: T10, T16
 
-- [ ] **T18 · StackView mechanics** — M
+- [x] **T18 · StackView mechanics** — M
   Top note text of active stack, note count, quick-add input + Push, Done →
   complete, Toss → delete, Edit → inline edit, "See all N" opens list.
   **Done when:** e2e: push → new note becomes top; Done → note removed, next

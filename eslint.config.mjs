@@ -9,7 +9,7 @@ export default defineConfig(
   // Flat config ignores .git and node_modules by default but NOT gitignored
   // build output — declare it explicitly.
   {
-    ignores: ["**/dist/", "coverage/", "reference/"],
+    ignores: ["**/dist/", "coverage/", "reference/", "web/test-results/", "web/playwright-report/"],
   },
   js.configs.recommended,
   tseslint.configs.recommended, // non-type-checked (deliberate; upgrade path when async server routes land)
@@ -23,8 +23,15 @@ export default defineConfig(
     },
   },
   {
-    // Node-side code + tool config files
-    files: ["server/**/*.ts", "eslint.config.mjs", "web/svelte.config.js", "web/vite.config.ts"],
+    // Node-side code + tool config files (incl. the Playwright harness, T17)
+    files: [
+      "server/**/*.ts",
+      "eslint.config.mjs",
+      "web/svelte.config.js",
+      "web/vite.config.ts",
+      "web/playwright.config.ts",
+      "web/tests/**/*.ts",
+    ],
     languageOptions: { globals: { ...globals.node } },
   },
   {

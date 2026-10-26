@@ -154,7 +154,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   verified.
   Depends: T15
 
-- [ ] **T17 · First Run view** — S
+- [x] **T17 · First Run view** — S
   Zero stacks → centered create form (name + Create stack) per `DESIGN.md` §5.5;
   POST `/api/stacks`.
   **Done when:** e2e: fresh DB → create "Work" → app enters StackView; server

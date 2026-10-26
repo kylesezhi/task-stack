@@ -16,6 +16,8 @@ server/data.db-shm
 
 # Test artifacts
 coverage/
+web/test-results/
+web/playwright-report/
 
 # mise local overrides (personal, not shared)
 mise.local.toml

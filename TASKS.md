@@ -168,7 +168,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   note becomes top, archive entry exists; Toss removes; Edit changes text.
   Depends: T11, T15, T16
 
-- [ ] **T19 · ListView mechanics** — M
+- [x] **T19 · ListView mechanics** — M
   All notes top-first; drag-to-reorder; per-row edit + toss; Close.
   **Done when:** e2e: reorder two notes → reload preserves new order; toss from
   the list removes the row.

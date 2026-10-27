@@ -197,7 +197,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 3 — Skeuomorphic stack visuals
 
-- [ ] **T23 · Deterministic per-note randomness (shared)** — S
+- [x] **T23 · Deterministic per-note randomness (shared)** — S
   Pure functions `tilt(id)`, `edgeOffset(id)`, `colorIndex(id, n)` — no
   `Math.random`, values stable across reloads/devices.
   **Done when:** shared unit tests: same id → same values; tilt within ±2–6°;

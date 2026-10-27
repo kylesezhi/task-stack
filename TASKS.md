@@ -189,7 +189,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   shows "Nothing done yet. Push something."
   Depends: T09, T16
 
-- [ ] **T22 · Playwright e2e suite** — M
+- [x] **T22 · Playwright e2e suite** — M
   Happy path (first run → create → push → pop → archive) and the two-context
   sync test.
   **Done when:** `pnpm --filter web test:e2e` green locally.

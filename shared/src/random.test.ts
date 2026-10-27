@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colorIndex, edgeOffset, tilt } from "./index.js";
+import { colorIndex, edgeDrop, edgeOffset, tilt } from "./index.js";
 
 /**
  * Realistic uuid literals (style matches validation.test.ts). Reused in
@@ -111,6 +111,69 @@ describe("edgeOffset", () => {
   });
 });
 
+describe("edgeDrop", () => {
+  it("returns the same value on every call for a reused id", () => {
+    // Same stability contract as edgeOffset: reload/device invariance with
+    // zero storage, so a second call must agree bit-for-bit with the first.
+    expect(edgeDrop(UUID_NOTE_TOP)).toBe(edgeDrop(UUID_NOTE_TOP));
+    expect(edgeDrop(UUID_NOTE_BOT)).toBe(edgeDrop(UUID_NOTE_BOT));
+  });
+
+  it("matches the pinned regression values for fixed uuid literals", () => {
+    // Same rationale as the tilt/edgeOffset pins — guard the algorithm, not
+    // the intent. A typo in the `task-stack:edge-drop` seed string or a
+    // change to the hashing would silently re-drop every buried edge while
+    // every distribution test below stayed green.
+    expect(edgeDrop(UUID_NOTE_TOP)).toBe(6.673583984375);
+    expect(edgeDrop(UUID_NOTE_BOT)).toBe(7.40948486328125);
+    expect(edgeDrop(UUID_NOTE_C)).toBe(9.2418212890625);
+    expect(edgeDrop(UUID_NOTE_D)).toBe(7.65875244140625);
+  });
+
+  it.each([...FIXTURE_IDS, ...SWEEP_IDS])("stays within 6–10px for id %s", (id) => {
+    // Also asserts finiteness — NaN would pass regular bounds checks and
+    // would slip past a naive `>= 6` assertion, so check it explicitly.
+    const value = edgeDrop(id);
+    expect(Number.isFinite(value)).toBe(true);
+    expect(value).toBeGreaterThanOrEqual(6);
+    expect(value).toBeLessThanOrEqual(10);
+  });
+
+  it("is strictly positive across fixtures and sweep", () => {
+    // One-sided BY DESIGN (DESIGN.md §2/§5.1: a buried note always sits a
+    // little lower than the top — the pile's mass grows downward), so 0,
+    // negatives, and -0 are all out of contract, not just unlikely.
+    for (const id of [...FIXTURE_IDS, ...SWEEP_IDS]) {
+      expect(edgeDrop(id) > 0).toBe(true);
+    }
+  });
+
+  it("never collapses onto the edgeOffset stream across the sweep", () => {
+    // A fourth purpose stream exists precisely so the vertical drop is
+    // decorrelated from the horizontal peek. The pairing-set check alone
+    // would NOT catch the cheapest wrong refactor — edgeDrop reusing
+    // EDGE_SEED (i.e. becoming Math.abs(edgeOffset(id))) keeps plenty of
+    // pairing variety. The per-id inequality pins it: a reused stream
+    // fails on the very first equal id.
+    for (const id of SWEEP_IDS) {
+      expect(edgeDrop(id)).not.toBe(Math.abs(edgeOffset(id)));
+    }
+    // And the pairing spread itself, for the shape of the correlation we
+    // actually care about: pairings must VARY, and peek sides must span
+    // BOTH sides across the fixed sweep (asserted as == 2 — the sweep is
+    // frozen, so this is a deterministic fact, not a hope).
+    const pairings = new Set(
+      SWEEP_IDS.map((id) => `${Math.sign(edgeOffset(id))}/${Math.round(edgeDrop(id))}`),
+    );
+    expect(pairings.size).toBeGreaterThan(1);
+    const peekSides = new Set(SWEEP_IDS.map((id) => Math.sign(edgeOffset(id))));
+    expect(peekSides.size).toBe(2);
+    // Two fixtures sharing a peek side must still differ in drop
+    // (UUID_NOTE_TOP and UUID_NOTE_D both peek left).
+    expect(edgeDrop(UUID_NOTE_TOP)).not.toBe(edgeDrop(UUID_NOTE_D));
+  });
+});
+
 describe("colorIndex", () => {
   it("matches the pinned regression values for fixed uuid literals", () => {
     // Same rationale as the tilt/edgeOffset pins — guards the color seed
@@ -189,8 +252,8 @@ describe("pure by construction (no hidden state)", () => {
     // opposite order — a call-order-dependent module (e.g. a mutating
     // counter) would diverge on the second pass.
     for (const id of [...FIXTURE_IDS, ...SWEEP_IDS]) {
-      const forward = [tilt(id), edgeOffset(id), colorIndex(id, 5)];
-      const backward = [colorIndex(id, 5), edgeOffset(id), tilt(id)];
+      const forward = [tilt(id), edgeOffset(id), edgeDrop(id), colorIndex(id, 5)];
+      const backward = [colorIndex(id, 5), edgeDrop(id), edgeOffset(id), tilt(id)];
       expect(backward).toEqual([...forward].reverse());
       // And a pure pass change: tilt again right after color, unchanged.
       expect(tilt(id)).toBe(forward[0]);

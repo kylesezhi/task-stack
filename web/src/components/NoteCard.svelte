@@ -45,7 +45,10 @@
   .card {
     position: relative;
     /* Mockup sm card is 320×320; T28 owns the real responsive scale, so this
-       is the desktop silhouette only. min-height (not aspect-ratio) so a
+       is the desktop silhouette only. Same figure as the pile family:
+       StackView's .deck defines --pile-w/--pile-h once and T26's buried
+       edges inherit — the three layers share one silhouette by comment
+       contract until T28 tokenizes it. min-height (not aspect-ratio) so a
        long note grows the card instead of clipping — readability beats the
        square (DESIGN.md §5.1: exactly one READABLE task). */
     width: min(320px, 90vw);

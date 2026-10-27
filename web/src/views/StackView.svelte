@@ -1,13 +1,12 @@
 <script lang="ts">
   /**
-   * StackView mechanics (T18; sources: TASKS.md T18, DESIGN.md §3/§5.1/§6) —
-   * the desk: top note card, Done / Edit / Toss action row, "See all N"
-   * footer, quick-add form, empty-stack line. Chrome (T16) and the "See all"
-   * wiring stay as built; the placeholder stage is replaced by the real
-   * mechanics. The top note renders as the T25 NoteCard (paper material,
-   * deterministic tilt/color); peek edges arrive with T26, the push spring
-   * with T27, the ceremony with T29/T30, and the ghost-outline empty
-   * state's visuals with T31.
+   * StackView mechanics (T18) + T26 stack rendering (sources: TASKS.md
+   * T18/T26, DESIGN.md §3/§5.1/§6) — the desk: the growing pile (the T25
+   * top note card + T26's buried peeking edges + "+N more" scrap), Done /
+   * Edit / Toss action row, "See all N" footer, quick-add form,
+   * empty-stack line. Chrome (T16) and the "See all" wiring stay as
+   * built. The push spring lands with T27, the ceremony with T29/T30, and
+   * the ghost-outline empty state's visuals with T31.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -24,6 +23,8 @@
   import { openView } from "../lib/view";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
   import NoteCard from "../components/NoteCard.svelte";
+  import PeekingEdges from "../components/PeekingEdges.svelte";
+  import { hiddenNoteCount, peekingEdges } from "../lib/edge-style";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown": the server invariant keeps the row findable, but
@@ -190,36 +191,60 @@
 
   <!-- The document's only <main> (sheets are dialogs, not mains — T16 rule). -->
   <main class="stage">
-    {#if topNote !== null}
-      {#if editingId === topNote.id}
-        <form class="edit" onsubmit={onEditSubmit}>
-          <label class="visually-hidden" for="note-text">Note text</label>
-          <input
-            id="note-text"
-            type="text"
-            bind:value={editDraft}
-            maxlength={NOTE_TEXT_MAX_LENGTH}
-            autocomplete="off"
-            onkeydown={onEditKeydown}
-            use:focusOnMount
-          />
-          <button type="submit" disabled={!canSave}>Save</button>
-          <button type="button" onclick={cancelEdit}>Cancel</button>
-        </form>
-        {#if editError !== null}
-          <p class="error" role="alert">{editError}</p>
+    <!-- The T26 pile: the deck is position:relative and holds BOTH layers —
+         the deepest-first peeking edges render FIRST (so shallower edges
+         and the top card paint over them), then the existing card /
+         edit-form / empty branch. No z-index needed: the T25 .card is
+         position:relative, so DOM order paints it above the positioned
+         edges (both are in the same stacking context and positioned
+         elements paint in DOM order).
+         class:pile (topNote !== null): the pile keeps its 320px footprint
+         through edit mode too — read the .deck/.pile CSS, the deck must
+         not collapse when the short edit form replaces the tall card, or
+         the edges re-anchor around the shrunk box and the whole pile
+         jumps mid-edit. The EMPTY state deliberately gets no footprint:
+         its quiet centered line is the pre-pile look (T31 owns its ghost
+         visual). -->
+    <div class="deck" class:pile={topNote !== null}>
+      <PeekingEdges notes={peekingEdges(stackNotes)} hidden={hiddenNoteCount(noteCount)} />
+      {#if topNote !== null}
+        {#if editingId === topNote.id}
+          <!-- The inline edit form MUST be position:relative: non-positioned
+               in-flow content paints BELOW positioned siblings — our edges
+               are positioned and would cover the form (classic stacking
+               bug). This restores DOM-order painting for it. -->
+          <form class="edit" onsubmit={onEditSubmit}>
+            <label class="visually-hidden" for="note-text">Note text</label>
+            <input
+              id="note-text"
+              type="text"
+              bind:value={editDraft}
+              maxlength={NOTE_TEXT_MAX_LENGTH}
+              autocomplete="off"
+              onkeydown={onEditKeydown}
+              use:focusOnMount
+            />
+            <button type="submit" disabled={!canSave}>Save</button>
+            <button type="button" onclick={cancelEdit}>Cancel</button>
+          </form>
+          {#if editError !== null}
+            <p class="error" role="alert">{editError}</p>
+          {/if}
+        {:else}
+          <!-- The T25 paper card: material (grain/glue/edge/shadow) plus the
+               deterministic tilt and palette color, text in Caveat.
+               .note-text (the e2e locator) lives inside the card. While
+               editing, the card is replaced by the edit form — same swap
+               the placeholder made. -->
+          <NoteCard note={topNote} />
         {/if}
       {:else}
-        <!-- The T25 paper card: material (grain/glue/edge/shadow) plus the
-             deterministic tilt and palette color, text in Caveat. .note-text
-             (the e2e locator) lives inside the card. While editing, the card
-             is replaced by the edit form — same swap the placeholder made. -->
-        <NoteCard note={topNote} />
+        <!-- Quiet empty state (§5.1); the ghost-outline visual is T31.
+             noteCount 0 → peekingEdges([]) is [] and hiddenNoteCount is 0,
+             so the deck renders empty — fine until T31's ghost. -->
+        <p class="empty">The stack is empty.</p>
       {/if}
-    {:else}
-      <!-- Quiet empty state (§5.1); the ghost-outline visual is T31. -->
-      <p class="empty">The stack is empty.</p>
-    {/if}
+    </div>
   </main>
 
   {#if topNote !== null}
@@ -306,9 +331,70 @@
     gap: 0.75rem;
   }
 
+  /* The pile's positioning context (T26): relative so the absolute buried
+     edges (PeekingEdges) and the scrap anchor to it, not the page. The
+     pile vars are defined on the BASE class (not .pile) so they inherit
+     into the edges in every state; .pile (below) spends them on size.
+     NOTE the footprint stays honest per axis only: the horizontal
+     offsets (±10px) have centered slack at every viewport we run at, but
+     this rule makes no absolute guarantee about any overflow — it merely
+     keeps the deck from ADDING scrollable overflow through its own size. */
+  .deck {
+    position: relative;
+    /* The pile silhouette, defined ONCE here: the card, the edges, and
+       .pile's box all read these two vars — so edit mode, view mode, and
+       the buried layers can never disagree about how big the pile is.
+       T28's responsive pass will tokenize this (with NoteCard's identical
+       literal today). */
+    --pile-w: min(320px, 90vw);
+    --pile-h: 320px;
+  }
+
+  /* Pile present (a top note exists — card OR edit form): give the
+     deck the pile's full footprint even while the SHORT inline edit form
+     is the only in-flow child. Why: without it, the deck collapses to the
+     form's ~25px height, .stage's align-items:center re-centers the
+     shrunk box (~150px jump), the absolutely-positioned 320px edges
+     re-anchor around the shrunken deck, and they then paint OVER the
+     .actions row (positioned elements paint above non-positioned
+     siblings; pointer-events:none makes it click-through, so it silently
+     covers Done/Edit/Toss without blocking their clicks — invisible
+     paper over the desk's controls). Flex centering keeps the edit form
+     at the pile's visual center (the card's resting spot), so entering
+     edit mode no longer moves anything.
+     Flex-item geometry: the card carries the same literal
+     min(320px, 90vw)/320px silhouette, so view mode's box is identical —
+     and min-height (not height) keeps a long note growing the pile.
+     flex-direction: COLUMN puts the edit form and its error line back
+     into the vertical stack they had pre-T26 (default-direction row
+     would squeeze error beside the 320px-wide form); the card is a
+     single item and still centers on both axes.
+     Accepted residual (T26): a top note TALLER than 320px — a long
+     note — still settles the deck to the 320px floor when the card
+     unmounts for the edit form, so entering edit shifts the pile by
+     roughly (cardHeight − 320)/2. Left un-diagnosed is no overlap either
+     way; the full fix — keeping the card box in flow beneath the
+     overlaying form — is T28's layout pass. */
+  .deck.pile {
+    width: var(--pile-w);
+    min-height: var(--pile-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
   /* The top note's paper card lives in components/NoteCard.svelte (T25);
-     only the inline edit input keeps a local rule here, so entering/leaving
+     only the inline edit form keeps a local rule here, so entering/leaving
      edit mode doesn't visually jump families — same Caveat as the card text. */
+
+  /* The inline edit form must be POSITIONED: non-positioned in-flow content
+     paints below positioned siblings, and the buried edges (T26
+     PeekingEdges) are positioned — the form would render beneath the paper
+     edges it sits on. position:relative restores DOM-order painting. */
+  .edit {
+    position: relative;
+  }
 
   .empty {
     /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
@@ -384,6 +470,13 @@
   .error {
     margin: 0;
     text-align: center;
+    /* position:relative — the ONLY failure feedback must never paint
+       beneath positioned siblings: the edit flow's error lives inside
+       .deck, positioned .edge peers would cover non-positioned content
+       (the same stacking hazard the edit form's relative guards against).
+       Harmless for the two error sites outside the deck (actions row,
+       quick-add). */
+    position: relative;
     /* var(--ink-muted) (not a lighter gray): this is the ONLY failure
        feedback, and it keeps the ≥ WCAG AA quiet-ink floor — the token is
        darker than the old #555, so the rationale holds a fortiori. */

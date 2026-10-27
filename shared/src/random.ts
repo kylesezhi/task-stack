@@ -25,8 +25,9 @@
  * not comparable with a textbook FNV-1a implementation, and without the mix
  * the low-bit picks below collapse onto a single bucket (see `hashStream`).
  * Each purpose restarts the byte stream from its own derived seed, giving
- * three decorrelated streams for the same note id; the color palette itself
- * is defined later (T24 tokens), hence the `paletteSize` parameter.
+ * four decorrelated streams for the same note id (tilt, horizontal edge
+ * peek, buried-edge vertical drop, color); the color palette itself is
+ * defined later (T24 tokens), hence the `paletteSize` parameter.
  */
 const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -67,9 +68,10 @@ function hashStream(start: number, input: string): number {
 
 // Purpose seeds are themselves FNV-1a hashes of the purpose labels, so each
 // public function runs an independent stream: tilt sign/lean and edge peek
-// side and colors never feed off the same bits for the same note.
+// side/drop and colors never feed off the same bits for the same note.
 const TILT_SEED = hashStream(FNV_OFFSET_BASIS, "task-stack:tilt");
 const EDGE_SEED = hashStream(FNV_OFFSET_BASIS, "task-stack:edge");
+const EDGE_DROP_SEED = hashStream(FNV_OFFSET_BASIS, "task-stack:edge-drop");
 const COLOR_SEED = hashStream(FNV_OFFSET_BASIS, "task-stack:color");
 
 /** Fraction in [0, 1) from the hash's low 16 bits (never exactly 1, so the
@@ -117,6 +119,25 @@ export function tilt(id: string): number {
 export function edgeOffset(id: string): number {
   const hash = hashStream(EDGE_SEED, id);
   return sign(hash) * (EDGE_MIN_PX + EDGE_SPREAD_PX * unit(hash));
+}
+
+/**
+ * Vertical drop for one of the note's buried edges, in px. Magnitude is
+ * always in [6, 10) and ALWAYS POSITIVE: a buried note always sits a little
+ * lower than the top note — the pile's mass grows downward (DESIGN.md §5.1:
+ * the deep state's paper mass sinks toward the desk, the "+N more" scrap
+ * rests at the very bottom), and the approved mockup likewise keeps every
+ * buried note at-or-below the top. Unlike `edgeOffset` there is no sign to
+ * decorrelate, but the function is its own purpose stream rather than a
+ * reuse of the `edgeOffset` magnitude: sharing the stream would tie a
+ * buried note's horizontal peek to its vertical drop into one rigid
+ * pattern (e.g. the widest peeks always the deepest drops), which reads as
+ * mechanical rather than hand-placed. Deterministic per `id`, stable
+ * across reloads and devices forever (DECISIONS.md §3).
+ */
+export function edgeDrop(id: string): number {
+  const hash = hashStream(EDGE_DROP_SEED, id);
+  return EDGE_MIN_PX + EDGE_SPREAD_PX * unit(hash);
 }
 
 /**

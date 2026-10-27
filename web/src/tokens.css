@@ -133,8 +133,17 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
   /* Hover lift. */
   --shadow-note-hover: 0 16px 30px rgba(68, 52, 38, 0.15), 0 6px 12px rgba(50, 35, 20, 0.09);
-  /* Buried-note base; T26 grades depth from this. */
+  /* Buried-note base; T26 grades depth from this (position 6–10 rung). */
   --shadow-note-buried: 0 2px 4px rgba(68, 52, 38, 0.06), 0 1px 2px rgba(50, 35, 20, 0.04);
+  /* Buried-edge NEAR rung (mockup stack_view_home/code.html, sub-top buried
+   * note — Note 2's composite, verbatim): the shallowest buried edges
+   * (position 2–5) cast a little more than the middle rung — they hang
+   * closest to the lifted top card. */
+  --shadow-note-edge-near: 0 4px 10px rgba(68, 52, 38, 0.08), 0 1px 3px rgba(50, 35, 20, 0.05);
+  /* Buried-edge FAR rung (mockup stack_view_home/code.html, deepest buried
+   * note — Note 8's composite, verbatim): position 11+ — deeper notes are
+   * pressed further into the pile and cast less. */
+  --shadow-note-edge-far: 0 1px 3px rgba(68, 52, 38, 0.05), 0 1px 2px rgba(50, 35, 20, 0.04);
   /* Paper sheets (list / drawer / archive overlays). */
   --shadow-sheet: 0 16px 36px -6px rgba(68, 52, 38, 0.12), 0 2px 6px rgba(50, 35, 20, 0.05);
   /* Quick-add / edit input slips. */
@@ -197,7 +206,9 @@
    * mockups' grain dot #8e706a (the --outline ink) at a whisper — the color
    * matrix pins RGB constant and scales the turbulence alpha to ≤ 7%, so the
    * specks read as tooth, not texture. 120px stitched tile. A URL, not a
-   * per-card <filter> node: one cached asset, no DOM filter cost — T26's
-   * up-to-16 stacked cards never pay 16 filter trees. */
+   * per-card <filter> node: the pile pays one cached asset, period — T26
+   * caps the deck at 15 cards (edge-style.ts) and only the TOP card
+   * carries grain, so the app's total grain layers number ONE; per-card
+   * filter trees never multiply, best and worst case. */
   --note-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.557 0 0 0 0 0.439 0 0 0 0 0.416 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
 }

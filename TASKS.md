@@ -220,7 +220,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   note ids.
   Depends: T23, T24
 
-- [ ] **T26 · Stack rendering with peeking edges** — M
+- [x] **T26 · Stack rendering with peeking edges** — M
   Top note readable + buried edges peeking (alternating sides, deterministic
   offsets); visible edges capped ~15; "+N more" scrap for deeper stacks.
   **Done when:** the three DESIGN.md §5.1 states (1 / 8 / 40 notes) render

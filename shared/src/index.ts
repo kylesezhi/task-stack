@@ -1,6 +1,6 @@
 export type { AppState, CompletedNote, Note, Stack } from "./types.js";
 
-export { colorIndex, edgeOffset, tilt } from "./random.js";
+export { colorIndex, edgeDrop, edgeOffset, tilt } from "./random.js";
 
 export {
   CreateStackSchema,

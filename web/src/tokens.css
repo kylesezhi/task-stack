@@ -179,4 +179,25 @@
   /* -- Radius: mockup scale; defined only (T25 applies). ------------------- */
   --radius-note: 4px;
   --radius-pill: 9999px;
+
+  /* -- T25 note material: composite values VERBATIM from the mockups, same
+   *    rationale as the shadows above — mockup data, not per-component mixing
+   *    decisions, so the rgba composites live here and only here. -------- */
+  /* Glue-strip sheen: the post-it's translucent adhesive band along the top
+   * edge (stack_view_home "glue adhesive sheen strip": white 40% → 15% →
+   * none over 24px, fading downward). */
+  --note-glue: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.15) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  /* Paper grain: an inline-SVG feTurbulence fractal-noise tile (DESIGN.md §2
+   * "subtle paper grain"; DECISIONS.md §8 "SVG turbulence"), tinted the
+   * mockups' grain dot #8e706a (the --outline ink) at a whisper — the color
+   * matrix pins RGB constant and scales the turbulence alpha to ≤ 7%, so the
+   * specks read as tooth, not texture. 120px stitched tile. A URL, not a
+   * per-card <filter> node: one cached asset, no DOM filter cost — T26's
+   * up-to-16 stacked cards never pay 16 filter trees. */
+  --note-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.557 0 0 0 0 0.439 0 0 0 0 0.416 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
 }

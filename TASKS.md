@@ -213,7 +213,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   tokens are the only color source in components.
   Depends: T23
 
-- [ ] **T25 · Note card component** — M
+- [x] **T25 · Note card component** — M
   Paper grain (SVG feTurbulence), glue-strip sheen, darker 1px edge, layered
   shadow, tilt/color via T23 helpers.
   **Done when:** visual review; reload → identical placement for the same

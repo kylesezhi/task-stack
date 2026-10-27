@@ -4,8 +4,10 @@
    * the desk: top note card, Done / Edit / Toss action row, "See all N"
    * footer, quick-add form, empty-stack line. Chrome (T16) and the "See all"
    * wiring stay as built; the placeholder stage is replaced by the real
-   * mechanics. Peek edges / card visuals / ceremony arrive with T25–T27,
-   * the ghost-outline empty state's visuals with T31.
+   * mechanics. The top note renders as the T25 NoteCard (paper material,
+   * deterministic tilt/color); peek edges arrive with T26, the push spring
+   * with T27, the ceremony with T29/T30, and the ghost-outline empty
+   * state's visuals with T31.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -21,6 +23,7 @@
   import { snapshot, completeNote, editNote, pushNote, tossNote } from "../lib/store";
   import { openView } from "../lib/view";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
+  import NoteCard from "../components/NoteCard.svelte";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown": the server invariant keeps the row findable, but
@@ -207,7 +210,11 @@
           <p class="error" role="alert">{editError}</p>
         {/if}
       {:else}
-        <p class="note-text">{topNote.text}</p>
+        <!-- The T25 paper card: material (grain/glue/edge/shadow) plus the
+             deterministic tilt and palette color, text in Caveat. .note-text
+             (the e2e locator) lives inside the card. While editing, the card
+             is replaced by the edit form — same swap the placeholder made. -->
+        <NoteCard note={topNote} />
       {/if}
     {:else}
       <!-- Quiet empty state (§5.1); the ghost-outline visual is T31. -->
@@ -299,15 +306,9 @@
     gap: 0.75rem;
   }
 
-  /* Minimal readable top note — paper card + tilt are T25/T26. The
-     handwritten voice starts here (T24): DESIGN.md §2 — note text is Caveat,
-     everything else stays the quiet sans inherited from body. */
-  .note-text {
-    font-family: var(--font-hand);
-    font-size: 1.5rem;
-    /* Same family on the inline edit input below so entering/leaving edit
-       mode doesn't visually jump; sizes stay Phase 3's business. */
-  }
+  /* The top note's paper card lives in components/NoteCard.svelte (T25);
+     only the inline edit input keeps a local rule here, so entering/leaving
+     edit mode doesn't visually jump families — same Caveat as the card text. */
 
   .empty {
     /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor

@@ -179,10 +179,12 @@ function scanTargets(raw: string, isSvelte: boolean): string[] {
 
 test("no color literals outside tokens.css (guard: colors only come from tokens)", () => {
   // Sanity on the walk itself: app.css + all six views must be IN the scan,
-  // otherwise the guard passes vacuously after a future rename.
+  // otherwise the guard passes vacuously after a future rename. The count
+  // tracks every .svelte under web/src — views (6) + components (1:
+  // NoteCard, T25) — update it when a component joins.
   const files = collect(srcRoot);
   expect(files.filter((entry) => entry.rel === "app.css")).toHaveLength(1);
-  expect(files.filter((entry) => entry.file.endsWith(".svelte"))).toHaveLength(6);
+  expect(files.filter((entry) => entry.file.endsWith(".svelte"))).toHaveLength(7);
   expect(
     files.some((entry) => entry.rel === EXEMPT),
     "tokens.css must exist to be exempted",

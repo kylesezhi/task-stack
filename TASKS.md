@@ -174,7 +174,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   the list removes the row.
   Depends: T11, T16, T18
 
-- [ ] **T20 · StacksDrawer mechanics** — M
+- [x] **T20 · StacksDrawer mechanics** — M
   List stacks (name, count, active marker); create, rename, delete (confirm
   modal: "Its N notes go with it. Completed notes stay in the Archive."),
   switch active.

@@ -1,13 +1,28 @@
 <script lang="ts">
   /**
-   * ArchiveView placeholder (T16; DESIGN.md §5.6) — a quiet top sheet with
-   * the live completed count and real Close wiring; the day groups, stack
-   * chips, and times arrive with T21.
+   * ArchiveView mechanics (T21; sources: TASKS.md T21, DESIGN.md §5.6,
+   * DECISIONS.md §6/§11) — the proof-of-accomplishment sheet, deliberately
+   * plain: the global completed list grouped by local calendar day (Today /
+   * Yesterday / dated), each row note text + a stack-name chip ("Work") +
+   * a local time ("11:42"), newest first. No stats, no charts, no streaks —
+   * the header chrome ("Archive", "{doneCount} done", Close) and the .overlay
+   * structure are T16's, kept as built; "{N} done" is never pluralized
+   * ("1 done" is correct prose here). The chip is mechanics only — a plain
+   * quiet pill; the real §5.6 chip visuals are T32.
+   *
+   * No local state, no effects: `groups` is one $derived over the snapshot
+   * via the pure groupCompletedByDay (lib/archive.ts), so the sheet is
+   * WS-live by construction — server truth drives the UI (DECISIONS.md §11),
+   * exactly like the other sheets. Each $derived recompute takes a fresh
+   * clock, so a day rollover relabels on the next snapshot (no ticking
+   * clock; accepted in archive.ts's head comment).
    */
   import { snapshot } from "../lib/store";
   import { closeOverlay } from "../lib/view";
+  import { formatCompletedTime, groupCompletedByDay } from "../lib/archive";
 
   const doneCount = $derived($snapshot?.completed.length ?? 0);
+  const groups = $derived(groupCompletedByDay($snapshot?.completed ?? []));
 </script>
 
 <section class="overlay">
@@ -20,7 +35,30 @@
        the document's only <main>; sheets are dialogs, not mains. Full focus
        management (inert background, aria-modal) is deferred to T33. -->
   <div class="body">
-    <p class="placeholder">Day groups arrive with T21.</p>
+    {#if groups.length === 0}
+      <!-- DESIGN.md §5.6's archive empty copy, exact. -->
+      <p class="empty">Nothing done yet. Push something.</p>
+    {:else}
+      {#each groups as group (group.key)}
+        <section class="day">
+          <h3>{group.label}</h3>
+          <ul>
+            {#each group.entries as entry (entry.id)}
+              <li class="entry">
+                <span class="note-text">{entry.text}</span>
+                <!-- Mechanics-only chip; denormalized stackName survives
+                     stack deletion (stackId may be null, T10). -->
+                <span class="chip">{entry.stackName}</span>
+                <!-- Raw ISO in datetime, local "11:42" as the visible text. -->
+                <time class="time" datetime={entry.completedAt}>
+                  {formatCompletedTime(entry.completedAt)}
+                </time>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/each}
+    {/if}
   </div>
 </section>
 
@@ -54,12 +92,69 @@
   .body {
     flex: 1;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
   }
 
-  .placeholder {
-    color: #999;
+  /* Grouped day columns — the same register as ListView's .rows. */
+  .day {
+    width: 100%;
+    max-width: 28rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .day ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* Minimal readable rows — the paper look is T32. */
+  .entry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid #ddd;
+  }
+
+  .note-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chip {
+    border: 1px solid #ddd;
+    border-radius: 0.25rem;
+    padding: 0.05rem 0.4rem;
+    /* #555 quiet-ink floor — real copy (the stack's name). */
+    color: #555;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .time {
+    /* Muted metadata, not copy (ListView's .row-actions disabled precedent). */
+    color: #777;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty {
+    /* #555 not #999: real copy's quiet-ink floor (ListView precedent —
+       #999 on white is ~2.85:1, below WCAG AA). */
+    color: #555;
     font-size: 0.9rem;
   }
 </style>

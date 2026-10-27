@@ -182,7 +182,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   context sees the switch land via WS.
   Depends: T10, T15, T16
 
-- [ ] **T21 · ArchiveView mechanics** — S
+- [x] **T21 · ArchiveView mechanics** — S
   Global completed list, newest first, grouped by day, stack-name chips, times,
   empty state copy.
   **Done when:** e2e: completed notes appear in correct day groups; empty state

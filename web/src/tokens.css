@@ -1,0 +1,182 @@
+/**
+ * Design tokens (T24) — THE single source of color for the app.
+ *
+ * Every color a component uses must come from here via var(); the guard test
+ * (web/src/tokens.test.ts) fails any hex/rgb(a)/hsl(a) literal anywhere else
+ * under web/src. rgba() literals are permitted ONLY inside this file, because
+ * the layered paper shadows are composite values copied verbatim from the
+ * mockups — inventing them from flat tokens would drift the look.
+ *
+ * Palette provenance: hand-curated from the approved Stitch mockups in
+ * reference/stitch_task_stack_ui_brief/ (stack_view_home/code.html, plus the
+ * sibling list_view / archive_view / stacks_drawer / first-run screens).
+ * Extracted 2026-10-27.
+ *
+ * Decisions recorded here so T25+ doesn't re-litigate them:
+ * - Typography (DESIGN.md §2): note text = Caveat (handwritten); everything
+ *   else = Inter. The mockups' display sans (Epilogue) is deliberately NOT
+ *   adopted — DESIGN.md §2 pins a quiet small sans and one voice; Inter is
+ *   it. No separate mono font is bundled: --font-mono is a system stack.
+ * - Ember/flame accents for the pop ceremony are DEFERRED to T29 (they will
+ *   extend, not replace, this file).
+ * - All values are LIGHT-MODE-ONLY per DECISIONS.md §8 — but everything flows
+ *   through custom properties so a dark "evening desk" theme can slot in
+ *   without refactor.
+ *
+ * Naming convention: --desk/--paper* are surfaces, --ink* is text, --accent*
+ * is the one loud vermilion action color, --gold* the quiet secondary, and
+ * --note-{0..7} the sticky-note palette (numeric ORDER-FIXED names so T25's
+ * colorIndex(id, 8) mapping stays a plain var(--note-{i}) lookup — the index
+ * IS the contract).
+ *----------------------------------------------------------------------------
+ * Self-hosted fonts — vendored files, no CDN (DECISIONS.md §8: Caveat OFL,
+ * self-hosted). Fetched once on 2026-10-27 from the Google Fonts css2 API
+ * (curl with a Chrome UA → "latin" block only, unicode-range U+0000-00FF):
+ *   Caveat  https://fonts.googleapis.com/css2?family=Caveat:wght@400..700
+ *           → web/public/fonts/caveat-var.woff2  (variable, wght 400–700)
+ *           license: LICENSE-Caveat-OFL.txt (SIL OFL 1.1, bundled alongside)
+ *   Inter   https://fonts.googleapis.com/css2?family=Inter:wght@400..600
+ *           → web/public/fonts/inter-var.woff2   (variable, wght 400–600)
+ *           license: LICENSE-Inter-OFL.txt (SIL OFL 1.1, bundled alongside)
+ * No <link> tags anywhere — the @font-face rules below make the browser load
+ * /fonts/* from our own origin (Vite serves public/ in dev and copies it to
+ * dist/ at build). font-display: swap keeps first paint instant. Sole
+ * consumer contract: only "Caveat"/"Inter" names resolve to these files —
+ * HTTP-level self-hosting is asserted by web/tests/e2e/fonts.spec.ts.
+ */
+
+@font-face {
+  font-family: "Caveat";
+  src: url("/fonts/caveat-var.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-var.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* -- Desk & paper surfaces (the warm light field) ----------------------- */
+  /* #fbf9f3 — the mockups' warm desk surface ("stack_view_home" background). */
+  --desk: #fbf9f3;
+  /* #ffffff — surface-container-lowest: input slips, sheets, modals. */
+  --paper: #ffffff;
+  /* #f5f3ed — surface-container-low: quiet fills, chips. */
+  --paper-warm: #f5f3ed;
+  /* #f0eee8 — surface-container. */
+  --paper-dim: #f0eee8;
+  /* #eae8e2 — surface-container-high: hover fills. */
+  --paper-shade: #eae8e2;
+  /* #e4e2dd — surface-container-highest / surface-variant: borders, hairlines. */
+  --paper-edge: #e4e2dd;
+
+  /* -- Ink (warm near-black text, DESIGN.md §2) --------------------------- */
+  /* #26211C — the mockups' Caveat ink: handwritten note text. */
+  --ink: #26211c;
+  /* #1b1c18 — on-surface: the default UI text. */
+  --ink-body: #1b1c18;
+  /* #5a413b — on-surface-variant: secondary text (the quiet-ink AA floor —
+   * 9.3:1 on --paper, comfortably above WCAG AA where #555 was ~7.5:1). */
+  --ink-muted: #5a413b;
+  /* #625b53 — tertiary; quietest ghost text. */
+  --ink-quiet: #625b53;
+  /* #665F56 — archive ink on older days (faded handwriting). */
+  --ink-faded: #665f56;
+  /* #8e706a — the mockups' paper-grain dot; quiet borders / outlines. */
+  --outline: #8e706a;
+  /* #e2bfb7 — outline-variant: soft warm hairlines. */
+  --outline-soft: #e2bfb7;
+
+  /* -- Primary accent: vermilion "Done" (the single loud color, §5.1) ----- */
+  /* #ae2a0c — the mockups' primary. */
+  --accent: #ae2a0c;
+  /* #972409 — the mockups' primary hover. */
+  --accent-hover: #972409;
+  /* #ffffff — on-primary text. */
+  --on-accent: #ffffff;
+  /* #ffdad3 — primary-fixed: tinted rails / badges on desk surfaces. */
+  --accent-soft: #ffdad3;
+  /* #ffb4a4 — primary-fixed-dim. */
+  --accent-soft-deep: #ffb4a4;
+
+  /* -- Gold secondary (canary-family quiet accents) ------------------------ */
+  /* #67601b — the mockups' secondary. */
+  --gold: #67601b;
+  /* #efe591 — secondary-container / fixed. */
+  --gold-soft: #efe591;
+  /* #d2c978 — secondary-fixed-dim. */
+  --gold-dim: #d2c978;
+
+  /* -- Note palette: EXACTLY 8, order-fixed (T25's colorIndex(id, 8) maps
+   *    i → var(--note-{i}); the indices must not drift). Desktop
+   *    "stack_view_home" muted set, mockup order. -------------------------- */
+  --note-0: #fef39e; /* canary */
+  --note-1: #fcf195; /* deep canary */
+  --note-2: #fdeede; /* peach */
+  --note-3: #fce8db; /* warm peach */
+  --note-4: #e4efe7; /* mint */
+  --note-5: #e0eee4; /* deep mint */
+  --note-6: #f7e2de; /* rose */
+  --note-7: #e9e4f0; /* lavender */
+
+  /* -- Shadows: composite values VERBATIM from the mockups; defined only
+   *    here (T25 applies them to the note stack / sheets / buttons). ------ */
+  /* Top-note card surface (the inset sheen is part of the composite). */
+  --shadow-note-top:
+    0 10px 24px -2px rgba(68, 52, 38, 0.13), 0 4px 8px -1px rgba(50, 35, 20, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  /* Hover lift. */
+  --shadow-note-hover: 0 16px 30px rgba(68, 52, 38, 0.15), 0 6px 12px rgba(50, 35, 20, 0.09);
+  /* Buried-note base; T26 grades depth from this. */
+  --shadow-note-buried: 0 2px 4px rgba(68, 52, 38, 0.06), 0 1px 2px rgba(50, 35, 20, 0.04);
+  /* Paper sheets (list / drawer / archive overlays). */
+  --shadow-sheet: 0 16px 36px -6px rgba(68, 52, 38, 0.12), 0 2px 6px rgba(50, 35, 20, 0.05);
+  /* Quick-add / edit input slips. */
+  --shadow-input: 0 3px 10px rgba(68, 52, 38, 0.06), 0 1px 2px rgba(50, 35, 20, 0.03);
+  --shadow-input-focus: 0 6px 18px rgba(68, 52, 38, 0.1);
+  /* The accent "Done" button's warm glow. */
+  --shadow-btn-accent: 0 4px 14px rgba(174, 42, 12, 0.32), 0 1px 3px rgba(68, 52, 38, 0.12);
+  --shadow-btn-accent-active: 0 2px 6px rgba(174, 42, 12, 0.25);
+  /* Top chrome bar. */
+  --shadow-chrome: 0 1px 8px rgba(68, 52, 38, 0.04);
+
+  /* -- Spacing: the mockups' scale, verbatim; defined only (T25+/T28
+   *    consume them; T28's mobile variants pair with its responsive work). - */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --gutter: 1.5rem;
+  --gutter-mobile: 0.75rem;
+  --margin: 2.5rem;
+  --margin-mobile: 1rem;
+
+  /* -- Type tokens: defined only, NOT applied this task (T25+ owns the
+   *    application; size cases match DESIGN.md §2's quiet scale). -------- */
+  /* Handwritten note text (the self-hosted file above is the only Caveat). */
+  --font-hand: "Caveat", "Segoe Script", cursive;
+  /* The quiet sans for everything else (DESIGN.md §2; variable file range
+   * 400–600 — bold weight beyond that is intentionally unbacked). */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Nothing bundled: plain system mono. */
+  --font-mono:
+    ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --text-label-sm: 11px;
+  --text-label-md: 12px;
+  --text-label-lg: 13px;
+  --text-body-md: 14px;
+  --text-body-lg: 18px;
+  --text-headline: 22px;
+  --text-note: 29px;
+
+  /* -- Radius: mockup scale; defined only (T25 applies). ------------------- */
+  --radius-note: 4px;
+  --radius-pill: 9999px;
+}

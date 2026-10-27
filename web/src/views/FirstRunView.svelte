@@ -83,7 +83,7 @@
 
   .line {
     margin: 0;
-    color: #555;
+    color: var(--ink-muted);
   }
 
   form {
@@ -102,10 +102,10 @@
 
   .error {
     margin: 0;
-    /* #555 (not #999): this is the ONLY failure feedback, and #999 on white
-       is ~2.85:1 — below WCAG AA. Same quiet ink as .line (§6 register;
-       real color design stays Phase 3). */
-    color: #555;
+    /* Keep the failure line above WCAG AA's quiet-ink floor: --ink-muted
+       (#5a413b) is darker than the old #555, so the rationale holds a
+       fortiori (§6 register; the palette itself is tokens.css, T24). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 </style>

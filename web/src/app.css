@@ -1,5 +1,16 @@
-/* Global reset only — the paper aesthetic and its design tokens arrive with
- * Phase 3 (T25). Keep this file lean until then. */
+/* Global reset + the app-wide desk ground. Sources: TASKS.md T24, T15,
+ * DECISIONS.md §8/§11, DESIGN.md §2.
+ *
+ * T24's place in the story: tokens.css (imported first, below) is the app's
+ * single color source — every component pulls via var() and the guard test
+ * (web/src/tokens.test.ts) bans literals outside it. body paints the desk
+ * surface and carries the Inter stack for everything that isn't note
+ * handwriting (note text opts into Caveat where it renders — T25+ owns the
+ * note card itself and the full paper aesthetic). color-scheme: light
+ * (DECISIONS.md §8 "light-only") keeps UA-painted surfaces (form controls,
+ * scrollbars) from going dark behind the warm palette.
+ */
+@import "./tokens.css";
 
 *,
 *::before,
@@ -7,8 +18,27 @@
   box-sizing: border-box;
 }
 
+/* Light-only (DECISIONS.md §8): paints UA-owned surfaces (form controls,
+ * scrollbars, autofill) light so they don't go dark behind the warm palette. */
+:root {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
+  background: var(--desk);
+  color: var(--ink-body);
+  font-family: var(--font-sans);
+}
+
+/* UA form controls declare their own font and so do NOT inherit body's
+ * sans (approved T24 font application) — pull the family through without
+ * the `font` shorthand, which would also drag in sizes (T25+ owns sizes). */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 /* T16 mechanics shell: overlays cover the desk as fixed full-viewport sheets
@@ -20,5 +50,5 @@ body {
   inset: 0;
   z-index: 10;
   overflow-y: auto;
-  background: #fff;
+  background: var(--paper);
 }

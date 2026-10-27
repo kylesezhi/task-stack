@@ -284,7 +284,7 @@
   }
 
   .count {
-    color: #777;
+    color: var(--ink-quiet);
     font-size: 0.9rem;
     /* span inside p: swallow the whitespace the {#text} interpolation adds */
     /* (kept minimal; Phase 3 owns real chrome styling) */
@@ -299,15 +299,22 @@
     gap: 0.75rem;
   }
 
-  /* Minimal readable top note — paper card + tilt are T25/T26. */
+  /* Minimal readable top note — paper card + tilt are T25/T26. The
+     handwritten voice starts here (T24): DESIGN.md §2 — note text is Caveat,
+     everything else stays the quiet sans inherited from body. */
   .note-text {
+    font-family: var(--font-hand);
     font-size: 1.5rem;
+    /* Same family on the inline edit input below so entering/leaving edit
+       mode doesn't visually jump; sizes stay Phase 3's business. */
   }
 
   .empty {
-    /* #555 not #999: real copy's quiet-ink floor (FirstRunView precedent —
-       #999 on white is ~2.85:1, below WCAG AA; Phase 3 tokens restyle anyway). */
-    color: #555;
+    /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
+       (FirstRunView precedent — the old #999 placeholder was ~2.85:1 on
+       white, below WCAG AA; the token is darker than the old #555, so ≥
+       WCAG AA holds a fortiori). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 
@@ -323,9 +330,10 @@
   }
 
   .done {
-    /* solid background = the one primary (§5.1); real color is Phase 3. */
-    background: #444;
-    color: #fff;
+    /* The single loud primary (DESIGN.md §2/§5.1): vermilion accent, white
+       on it — the mockup's Done replaces the old gray placeholder. */
+    background: var(--accent);
+    color: var(--on-accent);
     border: none;
   }
 
@@ -337,7 +345,7 @@
   .toss {
     background: none;
     border: none;
-    color: #888;
+    color: var(--ink-quiet);
   }
 
   .below {
@@ -349,7 +357,7 @@
     border: none;
     background: none;
     text-decoration: underline;
-    color: #555;
+    color: var(--ink-muted);
     cursor: pointer;
   }
 
@@ -375,9 +383,17 @@
   .error {
     margin: 0;
     text-align: center;
-    /* #555 (not #999): this is the ONLY failure feedback, and #999 on white
-       is ~2.85:1 — below WCAG AA. Same quiet ink as FirstRunView's. */
-    color: #555;
+    /* var(--ink-muted) (not a lighter gray): this is the ONLY failure
+       feedback, and it keeps the ≥ WCAG AA quiet-ink floor — the token is
+       darker than the old #555, so the rationale holds a fortiori. */
+    color: var(--ink-muted);
     font-size: 0.9rem;
+  }
+
+  /* Inline edit input: same handwritten family as .note-text (above) so the
+     transition between reading and editing doesn't visually jump (T24's
+     semantic font boundary; sizes/weights stay Phase 3's business). */
+  .edit input {
+    font-family: var(--font-hand);
   }
 </style>

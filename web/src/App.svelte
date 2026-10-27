@@ -80,7 +80,10 @@
   }
 
   .quiet {
-    color: #555;
+    /* Quiet ink is real copy (≥ WCAG AA) — var(--ink-muted) is the §2
+       secondary-ink floor (#5a413b, darker than the old #555, so the floor
+       holds a fortiori). */
+    color: var(--ink-muted);
   }
 
   .connection {
@@ -95,7 +98,12 @@
     margin: 0;
     padding: 0.25rem 0.5rem;
     text-align: center;
-    color: #555;
-    background: rgba(245, 241, 232, 0.9);
+    /* Same quiet-ink/token note as .quiet above. */
+    color: var(--ink-muted);
+    /* The desk's warm surface at 90% over whatever sits beneath — a
+     * translucent desk color via color-mix (evergreen-browsers only,
+     * DECISIONS.md §11) instead of an rgba literal that would freeze the
+     * old #f5f1e8 to a hex outside tokens.css. */
+    background: color-mix(in srgb, var(--desk) 90%, transparent);
   }
 </style>

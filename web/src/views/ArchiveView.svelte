@@ -82,7 +82,7 @@
 
   .done {
     margin: 0;
-    color: #777;
+    color: var(--ink-quiet);
   }
 
   header button {
@@ -126,35 +126,40 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--paper-edge);
   }
 
   .note-text {
-    flex: 1;
-    min-width: 0;
+    /* DESIGN.md §2: archive note text stays handwritten, slightly faded —
+       Caveat for the hand, --ink-faded for the older-day ink. */
+    font-family: var(--font-hand);
+    color: var(--ink-faded);
   }
 
   .chip {
-    border: 1px solid #ddd;
+    border: 1px solid var(--paper-edge);
     border-radius: 0.25rem;
     padding: 0.05rem 0.4rem;
-    /* #555 quiet-ink floor — real copy (the stack's name). */
-    color: #555;
+    /* var(--ink-muted): the quiet-ink floor for real copy (the stack's
+       name), per the old #555 comment — the token is darker, so AA holds. */
+    color: var(--ink-muted);
     font-size: 0.75rem;
     white-space: nowrap;
   }
 
   .time {
-    /* Muted metadata, not copy (ListView's .row-actions disabled precedent). */
-    color: #777;
+    /* Muted metadata, not copy (ListView's disabled row-actions precedent):
+       --ink-quiet, the quietest step below --ink-muted. */
+    color: var(--ink-quiet);
     font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
   }
 
   .empty {
-    /* #555 not #999: real copy's quiet-ink floor (ListView precedent —
-       #999 on white is ~2.85:1, below WCAG AA). */
-    color: #555;
+    /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
+       (ListView precedent; the token is darker than the old #555, so the
+       ≥ WCAG AA rationale holds a fortiori). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 </style>

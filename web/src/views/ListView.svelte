@@ -373,7 +373,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--paper-edge);
   }
 
   /* Subtle in-place marker only: the row does NOT follow the pointer (no
@@ -384,7 +384,7 @@
 
   /* Highlight of the current drop target (pure-geometry hit-test). */
   .row.drop-target {
-    border-color: #555;
+    border-color: var(--ink-muted);
   }
 
   .handle {
@@ -393,11 +393,14 @@
     cursor: grab;
     background: none;
     border: none;
-    color: #555;
+    color: var(--ink-muted);
     padding: 0 0.25rem;
   }
 
   .note-text {
+    /* DESIGN.md §2: list rows keep the handwritten voice — Caveat, per
+       §5.3 ("handwritten note text"). */
+    font-family: var(--font-hand);
     flex: 1;
     min-width: 0;
   }
@@ -410,13 +413,13 @@
   .row-actions button {
     background: none;
     border: none;
-    color: #555;
+    color: var(--ink-muted);
     cursor: pointer;
   }
 
   .row-actions button:disabled {
     cursor: default;
-    color: #777;
+    color: var(--ink-quiet);
   }
 
   .edit {
@@ -426,9 +429,11 @@
   }
 
   .empty {
-    /* #555 not #999: real copy's quiet-ink floor (StackView precedent — */
-    /* #999 on white is ~2.85:1, below WCAG AA). */
-    color: #555;
+    /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
+       (StackView precedent — the old #999 placeholder was ~2.85:1 on white,
+       below WCAG AA; the token is darker than the old #555, so the floor
+       holds a fortiori). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 
@@ -444,8 +449,9 @@
   .error {
     margin: 0;
     text-align: center;
-    /* #555 (not #999): the only failure feedback must stay above WCAG AA. */
-    color: #555;
+    /* var(--ink-muted): the only failure feedback in the sheet keeps the
+       quiet-ink floor ≥ WCAG AA (token darker than the old #555). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 </style>

@@ -442,7 +442,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--paper-edge);
   }
 
   /* The row's ONE main button: switch + identity (name, count, marker). */
@@ -464,7 +464,7 @@
   }
 
   .active {
-    color: #555;
+    color: var(--ink-muted);
     font-size: 0.9rem;
     /* The folded-corner visual is T32's; this span never shrinks away. */
     white-space: nowrap;
@@ -473,7 +473,7 @@
   .kebab {
     background: none;
     border: none;
-    color: #555;
+    color: var(--ink-muted);
     cursor: pointer;
     padding: 0 0.25rem;
   }
@@ -486,8 +486,8 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
     min-width: 6rem;
   }
 
@@ -513,13 +513,16 @@
   .error {
     margin: 0;
     text-align: center;
-    /* #555 (not #999): the only failure feedback must stay above WCAG AA
-       quiet-ink floor (ListView precedent). */
-    color: #555;
+    /* var(--ink-muted): the quiet-ink failure line stays ≥ WCAG AA — the
+       token is darker than the old #555, so the floor holds a fortiori
+       (ListView precedent). */
+    color: var(--ink-muted);
     font-size: 0.9rem;
   }
 
-  /* Confirm modal backdrop over the sheet. */
+  /* Confirm modal backdrop over the sheet: the paper surface at 90% via
+     color-mix (evergreen-browsers only, DECISIONS.md §11) — same hazy-veil
+     look as the old rgba literal, sourced from tokens.css. */
   .backdrop {
     position: fixed;
     inset: 0;
@@ -527,12 +530,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.9);
+    background: color-mix(in srgb, var(--paper) 90%, transparent);
   }
 
   .modal {
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
     padding: 1rem;
     max-width: 24rem;
     display: flex;

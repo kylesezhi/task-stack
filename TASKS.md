@@ -204,7 +204,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   offsets 6–10px alternating; colorIndex within bounds.
   Depends: T02
 
-- [ ] **T24 · Design tokens + self-hosted fonts** — M (palette source:
+- [x] **T24 · Design tokens + self-hosted fonts** — M (palette source:
   `reference/stitch_task_stack_ui_brief/`)
   CSS custom properties (palette, spacing, shadows) extracted from the approved
   Stitch mockups; self-host Caveat + quiet sans via `@font-face` (bundled files,

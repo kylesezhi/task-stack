@@ -211,4 +211,22 @@
    * carries grain, so the app's total grain layers number ONE; per-card
    * filter trees never multiply, best and worst case. */
   --note-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.557 0 0 0 0 0.439 0 0 0 0 0.416 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* -- Motion (T27; DESIGN.md §7): the push landing's shared
+   *    durations/easings, defined once here so T29/T30/T32's animations
+   *    reuse them instead of re-litigating numbers per component.
+   *    Provenance: hand-tuned starting points (no mockup keyframes exist —
+   *    the studio brief pins INTENT, "springy bounce"/"simple fade", not
+   *    values), verified visually against TASKS.md T27's done-when.
+   *    Deliberate scope split: only durations/easings are tokens; the
+   *    choreography (fall distance, squash amounts, keyframe spacing)
+   *    stays in the owning component — feel is per-animation, clock is
+   *    shared. No colors here: the T24 token guard stays the color law. */
+  /* The full push landing: drop + slap + settle in one pass. */
+  --motion-push: 520ms;
+  /* The reduced-motion "simple fade" (§7; also the fallback T29/T30 reuse). */
+  --motion-fade: 150ms;
+  /* Gravity into the slap: starts slow-ish, hammers in — a fall, not a float. */
+  --ease-drop: cubic-bezier(0.5, 0, 0.9, 0.6);
+  /* Overshooting paper bounce: settles past rest, springs back. */
+  --ease-spring: cubic-bezier(0.3, 1.35, 0.45, 1);
 }

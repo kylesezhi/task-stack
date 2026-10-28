@@ -2,9 +2,9 @@
   /**
    * The paper note card (T25; DESIGN.md §2 "note material", §5.1 top card;
    * mockup: stack_view_home) — the one card the desk centers on. T26 stacks
-   * buried edges beneath it; T27 springs the push landing onto it; T29/T30
-   * animate it away (ceremony, toss). Material first, motion later: this
-   * task ships the card's still-life look.
+   * buried edges beneath it; the push spring lives here too (T27 — DESIGN.md
+   * §7: the new note "drops in and slaps on with a springy bounce, tilting
+   * into place"); T29/T30 animate it away (ceremony, toss).
    *
    * Every visual value is deterministic from the note id (lib/note-style):
    * same note → same tilt and color on every device, forever (DECISIONS.md
@@ -13,24 +13,57 @@
    * the glue gradient and feTurbulence grain are composite material tokens,
    * verbatim-mockup data like the shadows.
    *
-   * The card is presentation only: the desk's action row owns every
-   * interaction (DESIGN.md §5.1), so this element is plain reading surface —
-   * selectable text, no click affordances of its own.
+   * The landing animation (with StackView, T27) animates ONLY
+   * transform/opacity — its keyframes may reference --card-tilt and the
+   * motion tokens (tokens.css owns durations/easings so T29/T30 don't
+   * re-litigate them) — and its 100% keyframe equals the card's natural
+   * rest state exactly, so the settled pile is byte-identical whether or
+   * not a push animated (the T25/T26 reload-stability contract). Reduced
+   * motion becomes a plain opacity fade (DESIGN.md §7: "every animation
+   * becomes a simple fade") — the first prefers-reduced-motion handling in
+   * the codebase; T29/T30/T32 repeat the pattern.
+   *
+   * The card stays presentation-only apart from the landing props: the
+   * desk's action row owns every interaction (DESIGN.md §5.1), so this
+   * element is plain reading surface — selectable text, no click
+   * affordances of its own. StackView keys this element per top-note id
+   * and passes `landing` from its tracker; `onLanded` clears that flag on
+   * the card's animationend.
    */
   import type { Note } from "@task-stack/shared";
   import { noteColorVar, noteTilt } from "../lib/note-style";
 
   interface Props {
     note: Note;
+    /** True while this note's push landing animation is live (StackView's
+     * observation tracker decides; the card only wears it). */
+    landing?: boolean;
+    /** camelCase handler (house naming), called on the landing
+     * animation's end so StackView can clear its landing flag. Defaults
+     * to a no-op — the card renders fine wherever nobody cares. */
+    onLanded?: () => void;
   }
 
-  let { note }: Props = $props();
+  let { note, landing = false, onLanded = () => {} }: Props = $props();
 
   const tiltDegrees = $derived(noteTilt(note.id));
   const background = $derived(noteColorVar(note.id));
+
+  /** Guard on `landing`: exactly one animation can ever run on this card
+   * today (push-land), but a later ceremony animation's animationend
+   * hitting this same handler must not clear the landing flag. */
+  function onAnimationEnd(): void {
+    if (landing) onLanded();
+  }
 </script>
 
-<article class="card" style:--card-tilt={tiltDegrees + "deg"} style:--card-color={background}>
+<article
+  class="card"
+  class:landing
+  style:--card-tilt={tiltDegrees + "deg"}
+  style:--card-color={background}
+  onanimationend={onAnimationEnd}
+>
   <!-- Material overlays sit above the paper, below the ink: the post-it's
        adhesive sheen band, then the grain tooth. pointer-events:none keeps
        the text selectable (mockup: select-text). -->
@@ -107,5 +140,83 @@
     line-height: 1.35;
     letter-spacing: -0.01em;
     overflow-wrap: anywhere;
+  }
+
+  /* -- Push landing (T27; sources: TASKS.md T27, DESIGN.md §7 "drops in
+        and slaps on with a springy bounce, tilting into place",
+        DECISIONS.md §3): animates ONLY transform/opacity, and the 100%
+        keyframe is the card's natural rest state EXACTLY — the settled
+        pile stays byte-identical to the un-animated one (the T25/T26
+        reload-stability contract; DECISIONS.md §3). fill-mode: both keeps
+        the 0% keyframe authoritative from the very first painted frame
+        (no flash of the rest state before the fall). */
+  .card.landing {
+    animation: push-land var(--motion-push) both;
+  }
+
+  /* Choreography lives HERE, deliberately not in tokens.css (tokens own
+     durations/easings so T29/T30 don't re-litigate them; these numbers are
+     hand-tuned feel, verified against the T27 done-when's visual review).
+     0% starts 340px above the pile, rotated steeper than rest, invisible —
+     then falls with --ease-drop (accelerating like gravity). ~8% the sheet
+     has materialized mid-fall (opacity needs the head start; a card that
+     appears AT impact reads as a flicker, a card visible the whole fall
+     reads as slow/floaty). ~55% impact: a brief squash (scale wider than
+     tall, as if slapped down) a few px past rest. From impact onward the
+     segments run --ease-spring: the dip-to-rebound rhythm of a photo-paper
+     bounce paper settles from. 100% is the rest state — EXPLICIT
+     translateY(0)/scale(1) plus rotate(--card-tilt), in the SAME function
+     order as every keyframe before it (one shared list means every
+     segment interpolates per-function; a mismatched list would force
+     matrix decomposition on the 86%→100% segment). The final matrix is
+     mathematically identical to the natural rest rule above, so the
+     animation's last frame IS the deterministic still (no transform
+     drift, ever; the settled pile is byte-identical to the un-animated
+     one). */
+  @keyframes push-land {
+    0% {
+      transform: translateY(-340px) rotate(calc(var(--card-tilt) * 2.5)) scale(1);
+      opacity: 0;
+      animation-timing-function: var(--ease-drop);
+    }
+    8% {
+      opacity: 1;
+    }
+    55% {
+      transform: translateY(5px) rotate(calc(var(--card-tilt) * 1.1)) scale(1.05, 0.95);
+      animation-timing-function: var(--ease-spring);
+    }
+    72% {
+      transform: translateY(-7px) rotate(calc(var(--card-tilt) * 0.95)) scale(0.99, 1.01);
+      animation-timing-function: var(--ease-spring);
+    }
+    86% {
+      transform: translateY(2px) rotate(var(--card-tilt)) scale(1.01, 0.99);
+      animation-timing-function: var(--ease-spring);
+    }
+    100% {
+      transform: translateY(0) rotate(var(--card-tilt)) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Reduced motion (DESIGN.md §7: "every animation becomes a simple fade")
+     — the codebase's FIRST prefers-reduced-motion block; this is the
+     pattern T29/T30/T32 repeat: swap the named animation for a plain
+     opacity-only fade at --motion-fade, no transform, so the element
+     renders at rest instantly and fades in. Same 100%-equals-rest
+     property: the fade's end state is exactly the natural card. */
+  @media (prefers-reduced-motion: reduce) {
+    .card.landing {
+      animation: push-fade var(--motion-fade) both;
+    }
+    @keyframes push-fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
   }
 </style>

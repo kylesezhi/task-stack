@@ -5,8 +5,11 @@
    * top note card + T26's buried peeking edges + "+N more" scrap), Done /
    * Edit / Toss action row, "See all N" footer, quick-add form,
    * empty-stack line. Chrome (T16) and the "See all" wiring stay as
-   * built. The push spring lands with T27, the ceremony with T29/T30, and
-   * the ghost-outline empty state's visuals with T31.
+   * built. The push spring HAS landed (T27): the landing rule is "the top
+   * id of the active stack was absent one observation ago" (lib/push-land)
+   * — a push lands; everything else (reload, reveal, reorder, edit, the
+   * duplicate WS rebroadcast) stays still. The ceremony comes with
+   * T29/T30, and the ghost-outline empty state's visuals with T31.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -25,6 +28,7 @@
   import NoteCard from "../components/NoteCard.svelte";
   import PeekingEdges from "../components/PeekingEdges.svelte";
   import { hiddenNoteCount, peekingEdges } from "../lib/edge-style";
+  import { PushLandingTracker } from "../lib/push-land";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown": the server invariant keeps the row findable, but
@@ -44,6 +48,49 @@
       .sort((a, b) => a.position - b.position),
   );
   const topNote = $derived(stackNotes[0] ?? null);
+
+  // -- Push landing (T27) ---------------------------------------------------
+  // Not an effect value but a MEMO-FREE instance: component-instance
+  // lifetime is exactly right because App.svelte keeps StackView mounted
+  // under every overlay (list/drawer/archive), so observations are
+  // continuous underneath them — opening and closing a sheet never reads
+  // as "a new pile" and never re-lands the top note.
+  const landingTracker = new PushLandingTracker();
+  // The id currently falling/springing onto the pile, cleared by the
+  // card's animationend (and manually in startEdit) so it never lingers:
+  // a stale flag would replay the drop on the next keyed remount (Edit →
+  // Cancel unmounts/remounts the card). The effect is deliberately PRE, not
+  // a plain effect: pre-effects run BEFORE the DOM update that mounts the
+  // new card, so the landing class is on the element in its FIRST painted
+  // frame; a plain effect would mount the card un-landed for one frame,
+  // then snap it mid-air (a visible stutter before the drop). It reads the
+  // same deriveds the template renders (activeStackId, stackNotes) so the
+  // class and the card can never disagree about which note is landing.
+  // First observation after mount/reload and the first observation after a
+  // stack switch both come back null — only pushes land (lib/push-land).
+  // RULE-OFF (svelte/prefer-writable-derived), covering this declaration
+  // AND the $effect.pre below: the rule reads the $state-plus-effect pair
+  // as the derivable-from-effect anti-pattern and wants a writable
+  // $derived, but a derived is structurally wrong here — it would only
+  // evaluate when READ, and the card is exactly what stops rendering
+  // (edit form replaces it, empty pile clears the branch), so
+  // observations would be SKIPPED while the flag cannot be trusted; the
+  // tracker must advance exactly once per snapshot REGARDLESS of what the
+  // template renders. That "runs on every snapshot change" property needs
+  // an effect; the pre-frame timing is a property of $effect.pre
+  // specifically, not the reason a derived fails ('pre' runs before the
+  // DOM update, so the landing class is in the card's first painted
+  // frame). This is genuinely per-snapshot state.
+  /* eslint-disable svelte/prefer-writable-derived */
+  let landingId = $state<string | null>(null);
+
+  $effect.pre(() => {
+    landingId = landingTracker.observe(
+      activeStackId ?? "",
+      stackNotes.map((note) => note.id),
+    );
+  });
+  /* eslint-enable svelte/prefer-writable-derived */
 
   // -- Quick-add -----------------------------------------------------------
   let draft = $state("");
@@ -118,6 +165,12 @@
 
   function startEdit(): void {
     if (topNote === null || editingId !== null) return;
+    // Clear any in-flight landing flag: Edit unmounts the card for the
+    // form, and Cancel remounts it keyed — a stale landingId would replay
+    // the drop on that remount. Closes the sub-half-second window the
+    // animationend clear cannot cover (T27; the edit form itself never
+    // animates).
+    landingId = null;
     editingId = topNote.id;
     editDraft = topNote.text;
     editError = null;
@@ -235,8 +288,22 @@
                deterministic tilt and palette color, text in Caveat.
                .note-text (the e2e locator) lives inside the card. While
                editing, the card is replaced by the edit form — same swap
-               the placeholder made. -->
-          <NoteCard note={topNote} />
+               the placeholder made.
+               {#key topNote.id} (T27): every push produces a FRESH card
+               element, so (a) a second push during a still-running
+               animation restarts cleanly on the new card, and (b) the
+               duplicate WS rebroadcast of the same snapshot (same top id)
+               remounts nothing and cannot re-trigger anything. Reveal
+               after done/toss and reorder land here too — a fresh card
+               WITHOUT the landing class (the reveal ceremony is T29's) —
+               and edit changes nothing at all, so no remount, no motion. -->
+          {#key topNote.id}
+            <NoteCard
+              note={topNote}
+              landing={landingId === topNote.id}
+              onLanded={() => (landingId = null)}
+            />
+          {/key}
         {/if}
       {:else}
         <!-- Quiet empty state (§5.1); the ghost-outline visual is T31.

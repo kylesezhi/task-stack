@@ -227,7 +227,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   correctly and are stable across reload.
   Depends: T25
 
-- [ ] **T27 · Push animation** — S
+- [x] **T27 · Push animation** — S
   New note drops in, slaps on with a spring bounce, tilts into place;
   `prefers-reduced-motion` → simple fade.
   **Done when:** visual review; reduced-motion emulation shows the fade

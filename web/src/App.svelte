@@ -73,7 +73,10 @@
 
 <style>
   .connecting {
-    min-height: 100vh;
+    /* T28 dvh cascade (DECISIONS.md §11 evergreen-only): 100vh first, then
+       100dvh so a collapsing mobile URL bar is honored honestly. */
+    min-height: 100vh; /* pre-dvh fallback */
+    min-height: 100dvh; /* evergreen dynamic viewport (DECISIONS.md §11) */
     display: flex;
     align-items: center;
     justify-content: center;

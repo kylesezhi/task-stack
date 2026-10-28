@@ -44,11 +44,28 @@ textarea {
 /* T16 mechanics shell: overlays cover the desk as fixed full-viewport sheets
  * so the closed/open state is actually visible without any design work (the
  * real paper sheets are T32; details are Phase 3's). The connection note in
- * App.svelte rides at a higher z-index. */
+ * App.svelte rides at a higher z-index.
+ *
+ * T28 (DESIGN.md §8; TASKS.md T28): the ONE .overlay class is the shared
+ * sheet hook — ListView, StacksDrawer, and ArchiveView all carry it, so
+ * the responsive gutter/block padding is styled exactly once here for all
+ * three sheets, desktop and mobile. Spacing comes only from the T24
+ * tokens (app.css header): --gutter inline (swapped to --gutter-mobile in
+ * the ≤640px block documented in tokens.css), --space-md leading and
+ * --space-lg trailing the sheet's content block. */
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 10;
   overflow-y: auto;
   background: var(--paper);
+  padding-inline: var(--gutter);
+  padding-block: var(--space-md) var(--space-lg);
+}
+
+@media (max-width: 640px) {
+  /* The mobile gutter pair, per tokens.css' breakpoint documentation. */
+  .overlay {
+    padding-inline: var(--gutter-mobile);
+  }
 }

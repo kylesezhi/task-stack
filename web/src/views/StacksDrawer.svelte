@@ -501,13 +501,32 @@
 
   .edit {
     flex: 1;
+    min-width: 0;
     display: flex;
     gap: 0.5rem;
   }
 
+  /* The rename input takes the space beside Save/Cancel (T28 §9):
+     flex:1 + min-width:0 so an 80-char unbroken name (STACK_NAME_MAX_
+     LENGTH) can never stretch the row past the sheet. */
+  .edit input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* The footer create form fills the sheet's gutters and caps where the
+     rows cap (28rem — same measure as .rows); its input shrinks beside
+     the button instead of stretching the row (T28 §9). */
   .create {
     display: flex;
     gap: 0.5rem;
+    width: 100%;
+    max-width: 28rem;
+  }
+
+  .create input {
+    flex: 1;
+    min-width: 0;
   }
 
   .error {
@@ -522,7 +541,11 @@
 
   /* Confirm modal backdrop over the sheet: the paper surface at 90% via
      color-mix (evergreen-browsers only, DECISIONS.md §11) — same hazy-veil
-     look as the old rgba literal, sourced from tokens.css. */
+     look as the old rgba literal, sourced from tokens.css. The backdrop is
+     position:fixed, so it does NOT inherit the .overlay's T28 padding —
+     it carries the same gutter itself, which is what `min(24rem, 100%)`
+     on .modal below resolves against (T28 §9: the modal must fit at
+     390px, long stack names included). */
   .backdrop {
     position: fixed;
     inset: 0;
@@ -531,12 +554,17 @@
     align-items: center;
     justify-content: center;
     background: color-mix(in srgb, var(--paper) 90%, transparent);
+    padding-inline: var(--gutter);
   }
 
   .modal {
     background: var(--paper);
     border: 1px solid var(--paper-edge);
     padding: 1rem;
+    /* Fits at 390px: min() caps at the desktop 24rem and falls back to
+       the padded backdrop's width on narrow viewports (T28 §9 — the
+       confirm copy names the stack, so the box must never overflow). */
+    width: min(24rem, 100%);
     max-width: 24rem;
     display: flex;
     flex-direction: column;
@@ -545,6 +573,10 @@
 
   .modal-copy {
     margin: 0;
+    /* T28 §9: an 80-char stack name inside the confirm sentence must wrap
+       (overflow-wrap: anywhere), not push the modal wide enough to
+       overflow a 390px viewport. */
+    overflow-wrap: anywhere;
   }
 
   .modal-actions {
@@ -560,5 +592,33 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  /* -- Mobile (≤640px; TASKS.md T28 §9): thumb-sized kebab and menu
+     controls. The breakpoint literal is documented once in tokens.css;
+     every repetition cites it. Visually quiet: the ghost looks stay (the
+     row's own border box and the menu's paper surface are the existing
+     styles; hover fills are T32's polish). */
+  @media (max-width: 640px) {
+    /* The confirm modal's backdrop is position:fixed, so it does NOT
+       inherit the sheet's responsive padding — carry the mobile gutter
+       pair here too, or the modal would sit 24px inset while the sheet
+       sits 12px (the same consistency the base rule documents). */
+    .backdrop {
+      padding-inline: var(--gutter-mobile);
+    }
+
+    /* Kebab + menu items: each control's OWN ≥44px hit floor (min-height)
+       plus comfortable padding. Deliberate boundary, same as the list
+       sheet's: labeled sheet buttons (Close/Save/Cancel/+ New stack) keep
+       their current comfortable padded sizes — T28's explicit size
+       mandate is the thumb-sized Done only (TASKS.md T28); everything
+       else must merely be REACHABLE (proven by the walkthrough), and the
+       sheets' real button treatment is T32/T33's. */
+    .kebab,
+    .menu button {
+      min-height: 44px;
+      padding: var(--space-sm) var(--space-md);
+    }
   }
 </style>

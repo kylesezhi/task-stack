@@ -165,11 +165,15 @@
 
   function startEdit(): void {
     if (topNote === null || editingId !== null) return;
-    // Clear any in-flight landing flag: Edit unmounts the card for the
-    // form, and Cancel remounts it keyed — a stale landingId would replay
-    // the drop on that remount. Closes the sub-half-second window the
-    // animationend clear cannot cover (T27; the edit form itself never
-    // animates).
+    // Clear any in-flight landing flag: the landing class is bound to this
+    // flag, so while it lingers the class stays on the card through the
+    // whole edit (the form overlays a concealed card since T28 — see the
+    // deck markup) and a push-during-edit would hand it to the next keyed
+    // remount. Cancel remounts nothing anymore (the card stays in flow,
+    // merely concealed), but the flag MUST still be cleared the moment the
+    // user enters edit: push-motion's Phase 4b pins exactly this clear as
+    // the guard that removes the class mid-flight (T27; the edit form
+    // itself never animates).
     landingId = null;
     editingId = topNote.id;
     editDraft = topNote.text;
@@ -246,26 +250,62 @@
   <main class="stage">
     <!-- The T26 pile: the deck is position:relative and holds BOTH layers —
          the deepest-first peeking edges render FIRST (so shallower edges
-         and the top card paint over them), then the existing card /
-         edit-form / empty branch. No z-index needed: the T25 .card is
+         and the top card paint over them), then the card / edit-form /
+         empty branch. No z-index needed: the T25 .card is
          position:relative, so DOM order paints it above the positioned
          edges (both are in the same stacking context and positioned
          elements paint in DOM order).
-         class:pile (topNote !== null): the pile keeps its 320px footprint
-         through edit mode too — read the .deck/.pile CSS, the deck must
-         not collapse when the short edit form replaces the tall card, or
-         the edges re-anchor around the shrunk box and the whole pile
-         jumps mid-edit. The EMPTY state deliberately gets no footprint:
-         its quiet centered line is the pre-pile look (T31 owns its ghost
-         visual). -->
+         class:pile (topNote !== null): the pile keeps its footprint
+         through edit mode too — read the .deck/.pile CSS and the T28 note
+         below: the card never leaves the flow anymore, so the deck's box
+         is the pile's box in EVERY state and nothing can jump. The EMPTY
+         state deliberately gets no footprint: its quiet centered line is
+         the pre-pile look (T31 owns its ghost visual). -->
     <div class="deck" class:pile={topNote !== null}>
       <PeekingEdges notes={peekingEdges(stackNotes)} hidden={hiddenNoteCount(noteCount)} />
       {#if topNote !== null}
+        <!-- The T25 paper card renders ALWAYS while a top note exists —
+             T28's edit-shift fix (the old .deck.pile "accepted residual"):
+             before, edit mode REPLACED the card with the form, the deck
+             collapsed toward its 320px floor for a tall note, the whole
+             pile jumped, and the re-anchored edges could paint over the
+             action row. Now the card merely goes `concealed` (visibility:
+             hidden — keeps its box in flow; see NoteCard) while the edit
+             form overlays it, so the deck's height is max(card, floor) at
+             all times and NOTHING shifts when edit opens or closes. All
+             other card behavior is untouched: {#key topNote.id} still
+             remounts per top id (T27's fresh-element rule — a second push
+             during a running animation restarts cleanly; the duplicate WS
+             rebroadcast of the same top id remounts nothing; reveal after
+             done/toss lands here too, without the landing class — the
+             reveal ceremony is T29's), and `landing` still flows from the
+             tracker. While editing, `concealed` is what hides the card —
+             NOT an unmount — so the landing/keyed-remount path above is
+             the only remount path left. -->
+        {#key topNote.id}
+          <NoteCard
+            note={topNote}
+            concealed={editingId === topNote.id}
+            landing={landingId === topNote.id}
+            onLanded={() => (landingId = null)}
+          />
+        {/key}
         {#if editingId === topNote.id}
-          <!-- The inline edit form MUST be position:relative: non-positioned
-               in-flow content paints BELOW positioned siblings — our edges
-               are positioned and would cover the form (classic stacking
-               bug). This restores DOM-order painting for it. -->
+          <!-- The inline edit form: an absolutely-positioned SIBLING over
+               the concealed card (T28), not a replacement of it. The form
+               MUST still be positioned — the buried edges are positioned
+               and non-positioned in-flow content would paint BELOW them —
+               and position:absolute over the pile's box puts the form's
+               contents exactly where the card's center is (see the .edit
+               rule). The editError line lives INSIDE this form container,
+               deliberately: as a flow sibling it would be laid out beside
+               the concealed card's full-height box (flex column) and grow
+               the pile mid-edit — the very jump this restructure kills —
+               while inside the inset:0 overlay it stays centered within
+               the deck's box, below the form controls, and away from the
+               action row (server error strings are short by construction —
+               the store's typed errors — so the centered line never
+               approaches the deck's bottom edge). -->
           <form class="edit" onsubmit={onEditSubmit}>
             <label class="visually-hidden" for="note-text">Note text</label>
             <input
@@ -279,31 +319,10 @@
             />
             <button type="submit" disabled={!canSave}>Save</button>
             <button type="button" onclick={cancelEdit}>Cancel</button>
+            {#if editError !== null}
+              <p class="error" role="alert">{editError}</p>
+            {/if}
           </form>
-          {#if editError !== null}
-            <p class="error" role="alert">{editError}</p>
-          {/if}
-        {:else}
-          <!-- The T25 paper card: material (grain/glue/edge/shadow) plus the
-               deterministic tilt and palette color, text in Caveat.
-               .note-text (the e2e locator) lives inside the card. While
-               editing, the card is replaced by the edit form — same swap
-               the placeholder made.
-               {#key topNote.id} (T27): every push produces a FRESH card
-               element, so (a) a second push during a still-running
-               animation restarts cleanly on the new card, and (b) the
-               duplicate WS rebroadcast of the same snapshot (same top id)
-               remounts nothing and cannot re-trigger anything. Reveal
-               after done/toss and reorder land here too — a fresh card
-               WITHOUT the landing class (the reveal ceremony is T29's) —
-               and edit changes nothing at all, so no remount, no motion. -->
-          {#key topNote.id}
-            <NoteCard
-              note={topNote}
-              landing={landingId === topNote.id}
-              onLanded={() => (landingId = null)}
-            />
-          {/key}
         {/if}
       {:else}
         <!-- Quiet empty state (§5.1); the ghost-outline visual is T31.
@@ -365,10 +384,25 @@
 </div>
 
 <style>
+  /* T28 (DESIGN.md §8, TASKS.md T28): the desk is the responsive shell —
+     ambient-centered on desktop (the base styles), the stack filling the
+     view on mobile (the media block at the end of this sheet). Gutters and
+     rhythm come only from the T24 spacing tokens (tokens.css): the desk's
+     inline padding is the desktop gutter, swapped to --gutter-mobile in
+     the media block; --space-md leads the column and --space-sm separates
+     its children (chrome / stage / actions / below / quick-add). No new
+     spacing values anywhere. */
   .desk {
-    min-height: 100vh;
+    /* The two-line cascade is the dvh progressive pattern (DECISIONS.md
+       §11 evergreen-only): 100vh first for anything older, then 100dvh so
+       a mobile URL bar's collapse/expand is honored honestly. */
+    min-height: 100vh; /* pre-dvh fallback */
+    min-height: 100dvh; /* evergreen dynamic viewport (DECISIONS.md §11) */
     display: flex;
     flex-direction: column;
+    padding-inline: var(--gutter);
+    padding-block-start: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .chrome {
@@ -378,8 +412,22 @@
     gap: 0.5rem;
   }
 
+  /* The chrome title is a centered COLUMN — stack name over the tiny
+     "8 notes" underneath — per DESIGN.md §5.1's parenthetical and BOTH
+     mockups (stack_view_home and mobile_stack_view_home both render the
+     name above the count). It is a flex column at every width, so the
+     desktop and mobile chrome read identically. overflow-wrap: anywhere
+     is the 80-char-name guard (shared/src/validation.ts
+     STACK_NAME_MAX_LENGTH): a long unbroken name wraps instead of opening
+     a horizontal scrollbar. e2e reads .title by text content only, so the
+     restructure is assertion-safe. */
   .title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .count {
@@ -399,49 +447,29 @@
   }
 
   /* The pile's positioning context (T26): relative so the absolute buried
-     edges (PeekingEdges) and the scrap anchor to it, not the page. The
-     pile vars are defined on the BASE class (not .pile) so they inherit
-     into the edges in every state; .pile (below) spends them on size.
+     edges (PeekingEdges) and the scrap anchor to it, not the page — and,
+     since T28, so the absolute edit form overlays the pile, not the page.
      NOTE the footprint stays honest per axis only: the horizontal
      offsets (±10px) have centered slack at every viewport we run at, but
      this rule makes no absolute guarantee about any overflow — it merely
      keeps the deck from ADDING scrollable overflow through its own size. */
   .deck {
     position: relative;
-    /* The pile silhouette, defined ONCE here: the card, the edges, and
-       .pile's box all read these two vars — so edit mode, view mode, and
-       the buried layers can never disagree about how big the pile is.
-       T28's responsive pass will tokenize this (with NoteCard's identical
-       literal today). */
-    --pile-w: min(320px, 90vw);
-    --pile-h: 320px;
   }
 
-  /* Pile present (a top note exists — card OR edit form): give the
-     deck the pile's full footprint even while the SHORT inline edit form
-     is the only in-flow child. Why: without it, the deck collapses to the
-     form's ~25px height, .stage's align-items:center re-centers the
-     shrunk box (~150px jump), the absolutely-positioned 320px edges
-     re-anchor around the shrunken deck, and they then paint OVER the
-     .actions row (positioned elements paint above non-positioned
-     siblings; pointer-events:none makes it click-through, so it silently
-     covers Done/Edit/Toss without blocking their clicks — invisible
-     paper over the desk's controls). Flex centering keeps the edit form
-     at the pile's visual center (the card's resting spot), so entering
-     edit mode no longer moves anything.
-     Flex-item geometry: the card carries the same literal
-     min(320px, 90vw)/320px silhouette, so view mode's box is identical —
-     and min-height (not height) keeps a long note growing the pile.
-     flex-direction: COLUMN puts the edit form and its error line back
-     into the vertical stack they had pre-T26 (default-direction row
-     would squeeze error beside the 320px-wide form); the card is a
-     single item and still centers on both axes.
-     Accepted residual (T26): a top note TALLER than 320px — a long
-     note — still settles the deck to the 320px floor when the card
-     unmounts for the edit form, so entering edit shifts the pile by
-     roughly (cardHeight − 320)/2. Left un-diagnosed is no overlap either
-     way; the full fix — keeping the card box in flow beneath the
-     overlaying form — is T28's layout pass. */
+  /* Pile present (a top note exists — card, concealed or not): give the
+     deck the pile's full footprint. T28 update: the card no longer
+     unmounts for the edit form (it goes visibility:hidden in flow — see
+     the deck markup note), so the deck's height is max(cardHeight, floor)
+     in EVERY state and the old edit-shift residual is CLOSED — entering
+     or leaving edit moves nothing, for short and tall notes alike.
+     The silhouette vars themselves moved to tokens.css (T28): --pile-w
+     and --pile-h live on :root now, single source for the deck box, the
+     card, and the buried edges (the T25/T26 comment-pair contract across
+     the three files points there); this rule just SPENDS them.
+     min-height (not height) keeps a long note growing the pile.
+     flex-direction: COLUMN centers the (single) card on both axes; the
+     edit form is absolutely positioned and out of this flow entirely. */
   .deck.pile {
     width: var(--pile-w);
     min-height: var(--pile-h);
@@ -455,12 +483,30 @@
      only the inline edit form keeps a local rule here, so entering/leaving
      edit mode doesn't visually jump families — same Caveat as the card text. */
 
-  /* The inline edit form must be POSITIONED: non-positioned in-flow content
-     paints below positioned siblings, and the buried edges (T26
-     PeekingEdges) are positioned — the form would render beneath the paper
-     edges it sits on. position:relative restores DOM-order painting. */
-  .edit {
-    position: relative;
+  /* The inline edit form (T28 restructure): an absolutely-positioned
+     overlay filling the pile's box — inset:0 of the position:relative
+     deck — with its contents centered over the pile, i.e. exactly where
+     the concealed card's center is. It MUST be positioned: the buried
+     edges (T26 PeekingEdges) are positioned and non-positioned in-flow
+     content would paint beneath the paper edges it sits on. Absolute
+     (was relative pre-T28) because the card now stays in flow beneath it;
+     DOM-order painting is preserved the same way — a positioned element
+     later than the edges paints above them, and above the concealed card,
+     which is what an overlay form should do.
+     Scoped to `.deck .edit` deliberately: the actions row's ghost button
+     ALSO carries the class .edit, and pre-T28 the shared bare selector was
+     harmless (position:relative on the button, background:none on the
+     form — both no-ops). The overlay form made the selector
+     layout-critical (an unscoped `position:absolute; inset:0` would
+     spread the Edit button across the whole desk), so both rules are now
+     pinned to their containers. */
+  .deck .edit {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
   .empty {
@@ -483,23 +529,54 @@
     cursor: pointer;
   }
 
+  /* -- Action row buttons (T28; DESIGN.md §2 "quiet and few", §5.1 action
+     row; mockups' Done stamp). Sizing/presence folded into the base rules;
+     the ≤640px block at the end adds only the thumb-sized floors. NO
+     transition/animation properties anywhere here — motion stays owned by
+     T27's landed work and T29/T30/T32/T33 — and no hover/active scale
+     transforms. */
   .done {
     /* The single loud primary (DESIGN.md §2/§5.1): vermilion accent, white
        on it — the mockup's Done replaces the old gray placeholder. */
     background: var(--accent);
     color: var(--on-accent);
     border: none;
+    /* The mockup's Done stamp: pill radius, the accent's warm glow
+       (--shadow-btn-accent), and a small uppercase label
+       (--text-label-lg + tracking) at BOTH breakpoints — the mobile block
+       only adds min-height/min-width thumb floors on top. */
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-btn-accent);
+    font-size: var(--text-label-lg);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
-  .edit {
+  /* Ghost Edit + quietest-ghost Toss (§2/§5.1): bare ink, comfortable
+     padding on the desktop base; the mobile block raises both to
+     ≥44px hit targets without changing their quiet looks. A --paper-shade
+     hover fill gives the ghosts pointer feedback (no motion). Scoped to
+     `.actions` for the same reason the form rule is scoped to `.deck`
+     (see above): the class .edit is shared with the overlay form, and an
+     unscoped `:hover` fill would tint the whole pile whenever the form is
+     hovered. */
+  .actions .edit {
     background: none;
     border: none;
+    padding: var(--space-xs) var(--space-sm);
   }
 
-  .toss {
+  .actions .edit:hover,
+  .actions .toss:hover {
+    background: var(--paper-shade);
+  }
+
+  .actions .toss {
     background: none;
     border: none;
     color: var(--ink-quiet);
+    padding: var(--space-xs) var(--space-sm);
   }
 
   .below {
@@ -515,14 +592,54 @@
     cursor: pointer;
   }
 
+  /* Quick-add (DESIGN.md §3 "quick-add input — styled like a blank note"):
+     the strip centers its slip; the slip itself is the paper affordance at
+     BOTH breakpoints (mockup "quick-add paper slip" — reference
+     mobile_stack_view_home): paper surface, --paper-edge hairline,
+     --radius-note corners, the input-slip shadow, and comfortable slip
+     padding. width:100% + max-width spans the mobile gutters while
+     capping the desktop slip at 26rem; the input takes the rest
+     (flex:1 + min-width:0 — min-width:0 is what lets a flex item shrink
+     below its content, so a 280-char paste never stretches the row).
+     On mobile the whole strip pins to the bottom (media block below). */
   .quick-add {
     display: flex;
     justify-content: center;
+    /* env(safe-area-inset-bottom) is 0 wherever there is no inset (all
+       desktops) → max() resolves to the token; on notched phones it
+       lifts the slip above the home indicator. max(), not the raw env():
+       the token floor keeps the desktop spacing identical. */
+    padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
   }
 
   .quick-add form {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+    width: 100%;
+    max-width: 26rem;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-note);
+    box-shadow: var(--shadow-input);
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .quick-add input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* The Push button, quiet per the mobile mockup: a paper-shade chip with
+     the accent as INK only (the slip is the affordance, not the button —
+     §2 "quiet and few"). radius-note chips it into the slip. The UA focus
+     outline is deliberately untouched — T33 owns focus styling. */
+  .quick-add button {
+    background: var(--paper-shade);
+    color: var(--accent);
+    border: none;
+    border-radius: var(--radius-note);
+    padding: var(--space-xs) var(--space-md);
   }
 
   .visually-hidden {
@@ -538,11 +655,10 @@
     margin: 0;
     text-align: center;
     /* position:relative — the ONLY failure feedback must never paint
-       beneath positioned siblings: the edit flow's error lives inside
-       .deck, positioned .edge peers would cover non-positioned content
-       (the same stacking hazard the edit form's relative guards against).
-       Harmless for the two error sites outside the deck (actions row,
-       quick-add). */
+       beneath positioned siblings. Since T28 the edit error sits inside
+       the absolutely-positioned .edit form (see the deck markup), where
+       the relative is redundant but harmless; the two error sites outside
+       the deck (actions row, quick-add) still want it. */
     position: relative;
     /* var(--ink-muted) (not a lighter gray): this is the ONLY failure
        feedback, and it keeps the ≥ WCAG AA quiet-ink floor — the token is
@@ -553,8 +669,86 @@
 
   /* Inline edit input: same handwritten family as .note-text (above) so the
      transition between reading and editing doesn't visually jump (T24's
-     semantic font boundary; sizes/weights stay Phase 3's business). */
-  .edit input {
+     semantic font boundary; sizes/weights stay Phase 3's business). Scoped
+     to `.deck .edit` for the same reason as the form rule above — the
+     class .edit is shared with the actions row's ghost button. */
+  .deck .edit input {
     font-family: var(--font-hand);
+  }
+
+  /* -- Mobile (≤640px; DESIGN.md §8, §5.1 mobile layout; TASKS.md T28) --
+     The breakpoint literal is documented once in tokens.css (var() cannot
+     appear in @media queries; every repetition cites that comment).
+     Desktop-first: everything above is the base; only deltas live here. */
+  @media (max-width: 640px) {
+    /* The mobile gutter pair (§4 gutters; --gutter-mobile is T24's). */
+    .desk {
+      padding-inline: var(--gutter-mobile);
+    }
+
+    /* §5.1's mobile composition ("the stack fills the middle of the
+       screen; Done/Edit/Toss row directly under the note"): the stage
+       gives up its desktop `flex: 1` — on desktop the leftover column
+       height ambient-centers the pile (the desktop mockup's centered
+       stage), but on mobile that same centering lands the action row
+       ~170px below a short card. flex:none + the min-height reserve take
+       the pile's box PLUS its edge poke, so the row sits DIRECTLY under
+       the note (the mobile mockup's min-h-[360px] upper-middle stage —
+       ours lands at 380px for the app's 320px pile), then "See all N".
+       The leftover space then goes BETWEEN "See all" and the strip:
+       margin-top:auto pins the quick-add to the bottom in the no-scroll
+       case and resolves to 0 when the column overflows, so it composes
+       with the sticky pin below for the tall/scroll case. Desktop is
+       deliberately untouched — its `flex: 1` ambient centering matches
+       §5.1's desktop layout and the desktop mockup's justify-between
+       composition, with the same edge-poke slack coming from the
+       leftover column height instead of a reserve.
+       The 60px reserve itself: flex:none alone would take exactly the
+       DECK's content height, but the deepest buried edge's rotated AABB
+       reaches ~30px BELOW the deck box — (160·cos8° + 155·sin8° + 10) −
+       160 ≈ 30px at the 390-width silhouette (the half-height sin term
+       from the ~310px box width plus the 10px edgeY drop) — poking into
+       the action-row band (the T26 Phase-5 invariant class;
+       pointer-events:none keeps clicks working, which is exactly why it
+       must be guarded geometrically). 60px = 2 × that reach, because the
+       stage CENTERS the deck (align/justify center) — the reserve must
+       cover the poke on both sides, so the stage holds the pile's box
+       AND its edges at mobile. It also gives the empty-state line a real
+       centered stage again (T31's ghost renders inside it).
+       The strip itself: margin-top:auto (above) plus position:sticky
+       bottom:0 — sticky, not fixed, so it stays inside the desk's flow
+       (the flex column's last child) and rides up over scrolled content
+       only while there is content beneath it; the desk-colored
+       background is what makes the pin honest (scrolled content must not
+       read through the strip). Desktop keeps the in-column flow (no
+       sticky — the breakpoint phase pins `position: static` there). */
+    .stage {
+      flex: none;
+      min-height: calc(var(--pile-h) + 60px);
+    }
+
+    .quick-add {
+      margin-top: auto;
+      position: sticky;
+      bottom: 0;
+      background: var(--desk); /* scrolled content must not read through */
+    }
+
+    /* Thumb-sized Done (the explicit T28 requirement, §5.1 "Big Done
+       target"; mockup stamp): 48px tall, 112px wide floors under the
+       shared pill/accent/shadow/type rules from the base sheet. */
+    .done {
+      min-height: 48px;
+      min-width: 112px;
+    }
+
+    /* Edit/Toss: ≥44px hit targets (pointer-target floor), comfortable
+       inline padding, ghost looks unchanged. Same .actions scoping as the
+       base rules (the class .edit is shared with the overlay form). */
+    .actions .edit,
+    .actions .toss {
+      min-height: 44px;
+      padding-inline: var(--space-md);
+    }
   }
 </style>

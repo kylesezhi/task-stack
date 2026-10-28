@@ -28,7 +28,11 @@
    * element is plain reading surface — selectable text, no click
    * affordances of its own. StackView keys this element per top-note id
    * and passes `landing` from its tracker; `onLanded` clears that flag on
-   * the card's animationend.
+   * the card's animationend. Since T28 StackView ALSO passes `concealed`
+   * while the note is being edited: the card stays mounted IN FLOW
+   * (visibility: hidden — see .card.concealed) so the pile's box never
+   * changes when the edit form overlays it (the T26 edit-shift residual,
+   * closed here rather than by an unmount).
    */
   import type { Note } from "@task-stack/shared";
   import { noteColorVar, noteTilt } from "../lib/note-style";
@@ -38,13 +42,19 @@
     /** True while this note's push landing animation is live (StackView's
      * observation tracker decides; the card only wears it). */
     landing?: boolean;
+    /** True while this note is being edited inline (StackView). The card
+     * stays in flow with visibility:hidden — its box keeps holding the
+     * pile up beneath the overlaying edit form — and drops out of the
+     * accessibility tree and text selection entirely (unlike opacity or
+     * color, visibility:hidden is announced to nobody). */
+    concealed?: boolean;
     /** camelCase handler (house naming), called on the landing
      * animation's end so StackView can clear its landing flag. Defaults
      * to a no-op — the card renders fine wherever nobody cares. */
     onLanded?: () => void;
   }
 
-  let { note, landing = false, onLanded = () => {} }: Props = $props();
+  let { note, landing = false, concealed = false, onLanded = () => {} }: Props = $props();
 
   const tiltDegrees = $derived(noteTilt(note.id));
   const background = $derived(noteColorVar(note.id));
@@ -60,6 +70,7 @@
 <article
   class="card"
   class:landing
+  class:concealed
   style:--card-tilt={tiltDegrees + "deg"}
   style:--card-color={background}
   onanimationend={onAnimationEnd}
@@ -77,15 +88,16 @@
 <style>
   .card {
     position: relative;
-    /* Mockup sm card is 320×320; T28 owns the real responsive scale, so this
-       is the desktop silhouette only. Same figure as the pile family:
-       StackView's .deck defines --pile-w/--pile-h once and T26's buried
-       edges inherit — the three layers share one silhouette by comment
-       contract until T28 tokenizes it. min-height (not aspect-ratio) so a
-       long note grows the card instead of clipping — readability beats the
-       square (DESIGN.md §5.1: exactly one READABLE task). */
-    width: min(320px, 90vw);
-    min-height: 320px;
+    /* The pile silhouette (T28): width/height come from tokens.css'
+       --pile-w/--pile-h — the ONE source the deck box, this card, and the
+       buried edges all read, so no layer can ever disagree about the
+       pile's size at any viewport. (Until T28 this was the duplicated
+       min(320px, 90vw) literal.) min-height (not aspect-ratio) so a long
+       note grows the card instead of clipping — readability beats the
+       square (DESIGN.md §5.1: exactly one READABLE task); --pile-h stays
+       flat 320px at every width per the tokens.css derivation. */
+    width: var(--pile-w);
+    min-height: var(--pile-h);
     border-radius: var(--radius-note);
     background: var(--card-color);
     /* "Slightly darker 1px paper edge" (DESIGN.md §2): the soft warm hairline
@@ -100,6 +112,17 @@
     flex-direction: column;
     justify-content: center;
     user-select: text;
+  }
+
+  /* Edit mode (T28): the card is NOT unmounted — it goes visibility:
+     hidden, which keeps its full box in flow (the deck's height stays
+     max(cardHeight, pile floor) at all times, so NOTHING shifts when the
+     edit form opens or closes — the T26 edit-shift residual, closed) and,
+     unlike display:none or opacity, removes the element from the
+     accessibility tree and from text selection entirely: the overlaying
+     edit form is the only surface that exists for AT and selection. */
+  .card.concealed {
+    visibility: hidden;
   }
 
   /* Post-it adhesive sheen along the top edge (mockup "glue adhesive sheen

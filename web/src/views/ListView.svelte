@@ -346,6 +346,17 @@
   h2 {
     margin: 0;
     font-size: 1.1rem;
+    /* T28 worst-case guard (§9; STACK_NAME_MAX_LENGTH): the header renders
+       "<name> — N notes" with no wrap guard today, so a valid 80-char
+       unbroken stack name (~700px min-content) opened a horizontal
+       scrollbar in the fixed sheet at 390px and pushed Close out of
+       reach. overflow-wrap: anywhere is the same 80-char guard the desk
+       chrome title and the drawer's modal copy already carry (T28's
+       worst-case pass missed this surface); min-width: 0 is what lets the
+       flex item shrink below its min-content, so the space-between header
+       keeps Close pinned to the right edge. */
+    overflow-wrap: anywhere;
+    min-width: 0;
   }
 
   .body {
@@ -403,6 +414,12 @@
     font-family: var(--font-hand);
     flex: 1;
     min-width: 0;
+    /* T28 worst-case guard (§9; shared/src/validation.ts
+       NOTE_TEXT_MAX_LENGTH): a 280-char unbroken token must wrap, not
+       open a horizontal scrollbar in the sheet at 390px. `anywhere`
+       (not break-word) also shrinks the token's min-content size, which
+       is what lets the flex item above actually shrink below it. */
+    overflow-wrap: anywhere;
   }
 
   .row-actions {
@@ -424,8 +441,17 @@
 
   .edit {
     flex: 1;
+    min-width: 0;
     display: flex;
     gap: 0.5rem;
+  }
+
+  /* The row's inline edit input takes the space beside Save/Cancel
+     (T28 §9): flex:1 + min-width:0 so a 280-char draft can never stretch
+     the row past the sheet. */
+  .edit input {
+    flex: 1;
+    min-width: 0;
   }
 
   .empty {
@@ -453,5 +479,27 @@
        quiet-ink floor ≥ WCAG AA (token darker than the old #555). */
     color: var(--ink-muted);
     font-size: 0.9rem;
+  }
+
+  /* -- Mobile (≤640px; TASKS.md T28 §9 walkthrough guarantee): thumb-sized
+     hit floors for the small per-row controls. The breakpoint literal is
+     documented once in tokens.css; every repetition cites it. */
+  @media (max-width: 640px) {
+    /* Drag handle + row actions: each control's OWN ≥44px hit floor
+       (min-height) plus comfortable padding — the 44px is the control's
+       box, not something the row's padding supplies. Deliberate boundary:
+       the labeled sheet buttons (Close/Save/Cancel) keep their current
+       comfortable padded sizes — T28's explicit size mandate is the
+       thumb-sized Done only (TASKS.md T28); everything else must merely
+       be REACHABLE (proven by the walkthrough), and the sheets' real
+       button treatment is T32/T33's. Ghost looks unchanged (no new
+       backgrounds; hover fills are T32's polish). The handle's
+       `touch-action: none` (base rule above) is what keeps a touch drag
+       a drag — T28's "touch polish" note from T19, delivered here. */
+    .handle,
+    .row-actions button {
+      min-height: 44px;
+      padding: var(--space-sm) var(--space-md);
+    }
   }
 </style>

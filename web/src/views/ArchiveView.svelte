@@ -134,6 +134,16 @@
        Caveat for the hand, --ink-faded for the older-day ink. */
     font-family: var(--font-hand);
     color: var(--ink-faded);
+    /* T28 worst-case guard (§9; NOTE_TEXT_MAX_LENGTH): a 280-char
+       unbroken token must wrap, not open a horizontal scrollbar in the
+       sheet at 390px. `anywhere` also shrinks the span's min-content
+       size, so the flex row (.entry) can shrink it below the token —
+       and min-width: 0 makes THIS span the row's yielding slot: it
+       shrinks and wraps to more lines before chip or time move (the
+       entry's left-packed look stays — no flex: 1 here, deliberately:
+       that would push chip/time to the right edge). */
+    overflow-wrap: anywhere;
+    min-width: 0;
   }
 
   .chip {
@@ -144,6 +154,24 @@
        name), per the old #555 comment — the token is darker, so AA holds. */
     color: var(--ink-muted);
     font-size: 0.75rem;
+    /* T28 worst-case guard (§9): the chip keeps nowrap (a wrapped chip
+       reads as a broken pill), so a valid 80-char unbroken stack name
+       (~480px) must be ELLIPSIZED instead of stretching its ~366px entry
+       into a sheet h-scroll at 390. Division of labor across the entry
+       (the round-2 squeeze bug: with a shrinkable chip a NORMAL name
+       rendered as "Wo…" whenever a long note text competed for space):
+       the note text is the yielding slot (min-width: 0 + overflow-wrap
+       — it wraps to more lines first); chip and time are RIGID
+       (flex: 0 0 auto — never shrunk below their content); and the
+       chip's ONLY truncation path is its own max-width: 40% + ellipsis
+       clamp, which fires solely when the chip itself exceeds the clamp
+       (the 80-char case). This is the overflow guard only — T32 owns
+       the chip's real §5.6 visuals. */
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
@@ -153,6 +181,9 @@
     color: var(--ink-quiet);
     font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
+    /* Rigid slot, same division of labor as .chip above: the note text
+       yields, the time never shrinks below its own content. */
+    flex: 0 0 auto;
   }
 
   .empty {

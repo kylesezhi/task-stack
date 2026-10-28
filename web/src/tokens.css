@@ -167,6 +167,63 @@
   --margin: 2.5rem;
   --margin-mobile: 1rem;
 
+  /* -- Layout tokens (T28; DESIGN.md §8 "Responsive behavior", §5.1): the
+   *    ONE mobile breakpoint and the pile silhouette, so the pile family
+   *    (StackView's .deck box, NoteCard's .card, PeekingEdges' .edge) can
+   *    never disagree about how big the pile is at any width. Desktop is
+   *    the base stylesheet; (max-width: 640px) is the mobile override.
+   *
+   *    THE BREAKPOINT = 640px. var() is not usable inside @media queries,
+   *    so the 640px literal is repeated in each component's media block —
+   *    this comment is its documentation home; every repetition cites it.
+   *    640px sits between the two worlds it must separate: the mobile
+   *    walkthrough floor (~390px, TASKS.md T28's done-when) and the desktop
+   *    ambient range — the mockups' mobile content column tops out at a
+   *    680px canvas (reference/stitch_task_stack_ui_brief/
+   *    mobile_stack_view_home, `max-w-[680px]`), so anything up to 640
+   *    still reads as the mockups' phone mood.
+   *
+   *    THE PILE SILHOUETTE, derived (the pile is ambient-centered, §8, so
+   *    every buried layer must reach no further than vw/2 from the pile's
+   *    center): a buried edge is a w × 320 box (width w, min-height 320 —
+   *    NOT square, the 320px height term dominates the sin component)
+   *    translated up to 10px (edgeX) and rotated up to just under 8°
+   *    (edgeTilt magnitude ∈ [4,8), lib/edge-style.ts), so its horizontal
+   *    reach from the pile center is (w/2)·cos8° + (320/2)·sin8° + 10px ≈
+   *    w/2·0.9903 + 22.3px + 10px. Keeping reach ≤ vw/2 under the shipped
+   *    w = (vw − 40)/1.13 gives a slack that is NOT constant but shrinks
+   *    slowly as the viewport narrows: ≈9px at 390, ≈8px at 375, ≈5px at
+   *    320, and the formula stays safe down to a ≈240px viewport. (The
+   *    previously duplicated literal `min(320px, 90vw)` — StackView .deck,
+   *    NoteCard .card, PeekingEdges .edge — overflows far sooner.) Above a
+   *    ≈402px viewport the cap yields the same flat 320px as before, so
+   *    default-viewport (1280×720) e2e captures (stack-edges' byte-exact
+   *    style assertions) are unaffected. The "+N more" scrap (`right:
+   *    −12px`) reaches only w/2 + 12px; its own ~3° rotation adds ~0.6px,
+   *    immaterial next to the 12px offset, so the scrap sits inside the
+   *    same allowance without further precision pretense.
+   *
+   *    ACCEPTED RESIDUAL (the T26 accepted-residual precedent, recorded at
+   *    the silhouette's derivation home): the TALL TOP CARD's rotated AABB
+   *    is w·cosθ + h·sinθ with h CONTENT-driven — a 280-char unbroken note
+   *    grows the card to ≈700px at ~310px width (NOTE_TEXT_MAX_LENGTH;
+   *    min-height beats the square, §5.1's one READABLE task) — and
+   *    θ ∈ ±[2,6)° (lib/note-style), worst case ≈381px. That fits every
+   *    overlay-scrollbar viewport — all phones, and the headless-Chromium
+   *    e2e harness, which reserves no classic scrollbar — but on a
+   *    classic-scrollbar desktop window narrowed below ≈400px it can poke
+   *    ≲6.5px past the layout viewport. NOT fixed here by design:
+   *    overflow-x masks are banned (the no-h-scroll guarantee must be real
+   *    sizing), and DESIGN.md §3's 300–340px band forbids narrowing the
+   *    pile further. responsive-layouts.spec.ts pins the bound
+   *    (±8px around the layout viewport) so a regression in the
+   *    silhouette, the tilt range, or the card growth fails loudly.
+   *    --pile-h stays a FLAT 320px at every width: the mockups' mobile
+   *    card is 312×304 — near-square is sanctioned; height is
+   *    deliberately NOT made responsive. ---------------------------- */
+  --pile-w: min(320px, calc((100vw - 40px) / 1.13));
+  --pile-h: 320px;
+
   /* -- Type tokens: defined only, NOT applied this task (T25+ owns the
    *    application; size cases match DESIGN.md §2's quiet scale). -------- */
   /* Handwritten note text (the self-hosted file above is the only Caveat). */

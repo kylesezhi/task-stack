@@ -50,18 +50,18 @@
 
 <style>
   /* One buried note's paper edge. Comment-paired with NoteCard.svelte's
-    .card and StackView's .deck — one pile silhouette, three consumers:
-    the deck defines --pile-w/--pile-h once, this edge inherits them (the
-    fallbacks keep the component standalone-correct — standalone rendering
-    via its literals if the deck's vars are absent). Material family is
-    shared with the card (token color, hairline, glue strip, graded
-    shadow); T28's responsive pass will tokenize all three silhouettes. */
+     .card and StackView's .deck — one pile silhouette, three consumers,
+     now single-sourced in tokens.css (T28): --pile-w/--pile-h live on
+     :root, always inherited, so the fallback literals are DEAD and removed
+     (they were the pre-T28 min(320px, 90vw) duplicates). Material family
+     is shared with the card (token color, hairline, glue strip, graded
+     shadow). */
   .edge {
     position: absolute;
     top: 0;
     left: 0;
-    width: var(--pile-w, min(320px, 90vw));
-    min-height: var(--pile-h, 320px);
+    width: var(--pile-w);
+    min-height: var(--pile-h);
     border-radius: var(--radius-note);
     background: var(--edge-color);
     /* DESIGN.md §2's slightly-darker paper edge, same hairline as the top

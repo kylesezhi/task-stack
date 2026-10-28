@@ -8,9 +8,11 @@
  * a buried note keeps its exact spot no matter what is above it) — every
  * capture is the DOM's own byte-level `style` attribute, so a regression in
  * the seam math, tokens, or ordering fails the deep-equal loudly. Plus the
- * edit-mode pile guard (the deck must NOT collapse when the short edit
- * form replaces the tall top card — footprint stability, edge-over-action
- * paint check).
+ * edit-mode pile guard (the deck holds max(cardHeight, the pile floor)
+ * while the top card is concealed in flow UNDER the overlaying edit form —
+ * T28's conceal model; the pre-T26 bug class this guard killed was a deck
+ * that shrank when its in-flow content left, re-anchoring the edges) —
+ * footprint stability, edge-over-action paint check.
  *
  * ONE sequential test, deliberately: the specs share this run's ONE DB
  * (web/playwright.config.ts) and spec files execute alphabetically — phases
@@ -131,14 +133,18 @@ test("buried edges peek deterministically through 1, 8, and 40 notes", async ({
 
   // -- Phase 5: edit mode keeps the pile's footprint (review-fix regression
   //    guard) ----------------------------------------------------------------
-  // The deck must NOT collapse when the short inline edit form replaces
-  // the tall top card: a collapsed deck is re-centered by .stage, re-anchors
-  // the 320px absolute edges, jumps the pile ~150px, and the edges then
-  // paint OVER the .actions row (positioned element above non-positioned
-  // siblings; pointer-events:none keeps the clicks going, so interactions
-  // never reveal the cover-up). Three assertions below pin footprint
-  // height, edge/action separation, and that the pile persists while
-  // editing. UI-driven edit via the actions row's Edit button.
+  // The deck must hold max(cardHeight, the pile floor) in EVERY state
+  // (T28's conceal model: the top card stays in flow, visibility:hidden,
+  // under the overlaying inline edit form — nothing unmounts, nothing
+  // shrinks). The bug class this guard killed: a deck that lost its
+  // in-flow box collapses, .stage re-centers the shrunk box (~150px
+  // jump), the absolutely-positioned 320px edges re-anchor around the
+  // shrunken deck, and they then paint OVER the .actions row (positioned
+  // element above non-positioned siblings; pointer-events:none keeps the
+  // clicks going, so interactions never reveal the cover-up). Three
+  // assertions below pin footprint height, edge/action separation, and
+  // that the pile persists while editing. UI-driven edit via the actions
+  // row's Edit button.
   const deckBox = await page.locator(".deck").boundingBox();
   if (deckBox === null) throw new Error("deck bounding box unavailable");
   await page.getByRole("button", { name: "Edit" }).click();
@@ -146,8 +152,11 @@ test("buried edges peek deterministically through 1, 8, and 40 notes", async ({
   await expect(page.locator(".edge")).toHaveCount(7);
   const deckDuringEdit = await page.locator(".deck").boundingBox();
   if (deckDuringEdit === null) throw new Error("deck bounding box unavailable");
-  // (a) Footprint: ±12px around the pre-edit height — a collapsed deck
-  //     loses ~290px; a correct deck holds its 320px pile height.
+  // (a) Footprint: ±12px around the pre-edit height — the deck must hold
+  //     max(cardHeight, the 320px pile floor) with the card concealed
+  //     (this phase's SHORT top note: the floor alone holds the height; a
+  //     deck that dropped its in-flow box or shrank below the floor fails
+  //     loudly).
   expect(Math.abs(deckDuringEdit.height - deckBox.height)).toBeLessThanOrEqual(12);
   // (b) Separation: no edge's box may overlap the action row's box —
   //     measured in the page (querying getBoundingClientRect), asserted

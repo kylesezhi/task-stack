@@ -72,7 +72,9 @@ test("the push lands with a spring, and motion stays honest everywhere else", as
   // equality — Svelte appends a scope-hash suffix to scoped keyframes).
   // Probe while the animation is live, then let it end: the class MUST
   // clear itself on the card's animationend (onLanded) — a lingering flag
-  // would replay the drop on the next card remount (Edit → Cancel).
+  // would keep the drop's class on the card through an edit (T28: the
+  // card is concealed in flow under the form, NOT unmounted) and hand it
+  // to the next keyed remount.
   // (Two plain roundtrips are enough HERE: the full-motion window is
   // 520ms — ~3.5× the fade's — so the probe frames cannot straddle;
   // Phase 5's 150ms window gets the retrying in-page poll instead.)
@@ -157,24 +159,27 @@ test("the push lands with a spring, and motion stays honest everywhere else", as
   if (matrices === null) throw new Error("no landing animation found on the 4b card");
   expect(matrices.endFrame).toBe(matrices.rest);
 
-  // Interrupt mid-fall: Edit unmounts the card for the inline form, then
-  // Cancel remounts it keyed. The animation is ALREADY dead by now — the
+  // Interrupt mid-fall: Edit CONCEALS the card in flow for the inline form
+  // (T28: visibility:hidden — the card stays mounted under the overlaying
+  // form; the pile's box never moves), then Cancel merely reveals it
+  // again — no remount. The animation is ALREADY dead by now — the
   // 100% probe above canceled it (cancel fires no animationend), so
   // `animationend` never ran and `landingId` is still set: the flag-clear
   // inside startEdit() is the ONLY guard this phase exercises — pin it here since
   // the architecture depends on it: without the clear, the stale flag
-  // would re-apply the landing class on the Cancel remount and restart
-  // the (now 3000ms) drop — whose animationend would clear it again.
+  // would keep the landing class on the card through the whole edit (and
+  // hand it to the next keyed remount on a push-during-edit) instead of
+  // the class being removed the moment Edit is clicked.
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(page.getByLabel("Note text")).toBeVisible(); // the form is up
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.locator(".note-text")).toHaveText("Edit probe"); // remounted
+  await expect(page.locator(".note-text")).toHaveText("Edit probe"); // revealed again
   // NON-RETRYING reads, deliberately: a retrying ABSENCE assertion
   // (toHaveClass not.toHaveClass) would wait out the replayed 3000ms drop
   // it is supposed to fail against — animationend clears the stale flag
   // at ~3s, inside the default 5s expect timeout, and the phase would pass
   // VACUOUSLY with the bug present. These two are immediate snapshots of
-  // the just-remounted card (the remount is already confirmed by the text
+  // the just-revealed card (the reveal is already confirmed by the text
   // assertion above).
   expect(await editCard.evaluate((el) => el.classList.contains("landing"))).toBe(false);
   expect(await editCard.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");

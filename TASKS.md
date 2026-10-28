@@ -234,7 +234,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   fallback.
   Depends: T26
 
-- [ ] **T28 · Responsive layouts** — M
+- [x] **T28 · Responsive layouts** — M
   Desktop ambient-centered; mobile: stack fills view, input pinned bottom,
   thumb-sized Done.
   **Done when:** walkthrough at ~390px and ~1280px+ has no horizontal scroll

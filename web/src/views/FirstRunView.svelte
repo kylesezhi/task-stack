@@ -67,14 +67,22 @@
 </main>
 
 <style>
+  /* T28 (DESIGN.md §8/§5.5): the centered screen keeps its centered flex
+     column, gains the responsive gutters (--gutter, mobile pair in the
+     media block), and the honest-viewport height — the two-line dvh
+     cascade (DECISIONS.md §11 evergreen-only; the URL bar must not lie
+     about the viewport on phones). */
   main {
+    /* pre-dvh fallback, then the evergreen dynamic viewport */
     min-height: 100vh;
+    min-height: 100dvh; /* evergreen dynamic viewport (DECISIONS.md §11) */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
     text-align: center;
+    padding-inline: var(--gutter);
   }
 
   h1 {
@@ -86,9 +94,21 @@
     color: var(--ink-muted);
   }
 
+  /* The create form spans the gutters and caps at 24rem (T28 §9: the form
+     fills the mobile layout without ever overflowing it); the input takes
+     the remaining space beside the button (flex:1 + min-width:0 — a
+     80-char unbroken stack name must shrink the input, never stretch the
+     row; STACK_NAME_MAX_LENGTH guard). */
   form {
     display: flex;
     gap: 0.5rem;
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  form input {
+    flex: 1;
+    min-width: 0;
   }
 
   .visually-hidden {
@@ -107,5 +127,12 @@
        fortiori (§6 register; the palette itself is tokens.css, T24). */
     color: var(--ink-muted);
     font-size: 0.9rem;
+  }
+
+  @media (max-width: 640px) {
+    /* The mobile gutter pair, per tokens.css' breakpoint documentation. */
+    main {
+      padding-inline: var(--gutter-mobile);
+    }
   }
 </style>

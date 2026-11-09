@@ -243,7 +243,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 4 — Ceremony & polish
 
-- [ ] **T29 · Pop ceremony** — M
+- [x] **T29 · Pop ceremony** — M
   Per DESIGN.md §5.2: lift → crumple (SVG displacement) → burn (mask) →
   embers → reveal beneath. CSS/SVG only, no libraries.
   **Done when:** visual review of the full sequence; reduced-motion becomes a

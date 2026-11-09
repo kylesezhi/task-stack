@@ -69,3 +69,18 @@ textarea {
     padding-inline: var(--gutter-mobile);
   }
 }
+
+/* T29 pop ceremony: registering --burn-r is what makes the burn radius
+ * ANIMATABLE — an unregistered custom property only ever flips discretely,
+ * but a registered <percentage> interpolates, so ONE keyframe animation on
+ * the ghost drives both burn consumers (the mask that eats the paper and
+ * the ember rim that rides the burn front) in perfect sync through plain
+ * var() reads (inherits: true). Registration is document-wide plumbing, so
+ * it lives here in the global sheet, not in a scoped component style. The
+ * initial value is "no hole": the burn starts only when the ceremony's
+ * keyframes ramp it. Evergreen-only syntax per DECISIONS.md §11. */
+@property --burn-r {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: -8%;
+}

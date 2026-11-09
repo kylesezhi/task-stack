@@ -104,8 +104,11 @@ test("the push lands with a spring, and motion stays honest everywhere else", as
 
   // -- Phase 4: Done reveal does NOT re-spring ------------------------------
   // Push a second note (it lands — its own drop, fine), then Done it: the
-  // REVEALED note beneath must arrive still. The reveal ceremony is T29's;
-  // if the push spring replayed here, every done would double-celebrate.
+  // REVEALED note beneath must never wear the push spring — if it replayed
+  // here, every done would double-celebrate. Since T29 the reveal has its
+  // OWN motion: the pop-reveal settle (DESIGN.md §5.2 step 5) that lands as
+  // the ghost's embers drift off. This phase pins the boundary: revealed,
+  // never landed.
   await input.fill("Done probe");
   await push.click();
   await expect(page.locator(".note-text")).toHaveText("Done probe");
@@ -116,7 +119,14 @@ test("the push lands with a spring, and motion stays honest everywhere else", as
   await expect(page.locator(".note-text")).toHaveText("Landing probe");
   const revealedCard = page.locator(".card").filter({ hasText: "Landing probe" });
   await expect(revealedCard).not.toHaveClass(/landing/);
-  expect(await revealedCard.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
+  // T29 contract (this assertion was `toBe("none")` before the ceremony
+  // existed — the spec's header deferred the reveal's motion to T29): the
+  // revealed card runs pop-reveal, NOT push-land. The animation name reads
+  // through the reveal's --motion-pop-anchored delay (a delayed animation
+  // still reports its name).
+  const revealName = await revealedCard.evaluate((el) => getComputedStyle(el).animationName);
+  expect(revealName).toContain("pop-reveal");
+  expect(revealName).not.toContain("push-land");
 
   // -- Phase 4b: Edit during a live landing never replays the drop ----------
   // The subsequent phases need a HUGE animation window to be race-free:

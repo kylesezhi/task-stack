@@ -8,8 +8,14 @@
    * built. The push spring HAS landed (T27): the landing rule is "the top
    * id of the active stack was absent one observation ago" (lib/push-land)
    * — a push lands; everything else (reload, reveal, reorder, edit, the
-   * duplicate WS rebroadcast) stays still. The ceremony comes with
-   * T29/T30, and the ghost-outline empty state's visuals with T31.
+   * duplicate WS rebroadcast) stays still. The pop ceremony HAS landed
+   * (T29): the rule is "the top id of the active stack departed AND
+   * landed in completed[]" (lib/pop-ceremony) — a pop burns; everything
+   * else (toss, reload, reorder, edit, switch, the WS rebroadcast) stays
+   * fire-free. The ghost is a decorative overlay of the departed note
+   * playing above the ALREADY-updated pile, so the reveal beneath it is
+   * just the new top card wearing NoteCard's `revealed` settle. The
+   * toss's quiet crumple comes with T30, and the ghost-outline empty state's visuals with T31.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -25,10 +31,13 @@
   import { snapshot, completeNote, editNote, pushNote, tossNote } from "../lib/store";
   import { openView } from "../lib/view";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
+  import type { Note } from "@task-stack/shared";
   import NoteCard from "../components/NoteCard.svelte";
   import PeekingEdges from "../components/PeekingEdges.svelte";
+  import PopCeremony from "../components/PopCeremony.svelte";
   import { hiddenNoteCount, peekingEdges } from "../lib/edge-style";
   import { PushLandingTracker } from "../lib/push-land";
+  import { PopCeremonyTracker } from "../lib/pop-ceremony";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown": the server invariant keeps the row findable, but
@@ -91,6 +100,48 @@
     );
   });
   /* eslint-enable svelte/prefer-writable-derived */
+
+  // -- Pop ceremony (T29) ---------------------------------------------------
+  // Same instance-lifetime reasoning as the landing tracker above (the desk
+  // stays mounted under every overlay, so observations are continuous). The
+  // tracker observes EVERY snapshot — local pops AND remote ones arriving
+  // over the WS fire identically — and StackView only spends its answer:
+  // `popGhost` is the departed note the ghost overlay re-enacts, `revealId`
+  // the new top that settles with the tiny bounce. The ghost clears itself
+  // via its own animationend (onExtinguished); the reveal flag via the
+  // card's (onRevealed).
+  const popTracker = new PopCeremonyTracker();
+  // Unlike landingId above, no RULE-OFF is needed: the rule reads these as
+  // ordinary state because the flags are ALSO assigned from event callbacks
+  // (onExtinguished / onRevealed in the template), not only from effects.
+  let popGhost = $state<Note | null>(null);
+  let revealId = $state<string | null>(null);
+  // Presence in completed[] is the pop/toss discriminator (complete is a row
+  // MOVE — the note keeps its uuid; toss archives nothing, DECISIONS.md §4).
+  const completedIds = $derived(new Set(($snapshot?.completed ?? []).map((entry) => entry.id)));
+
+  $effect.pre(() => {
+    const observation = popTracker.observe(activeStackId ?? "", stackNotes, completedIds);
+    if (observation.kind === "pop") {
+      popGhost = observation.note;
+      revealId = observation.revealedId;
+    } else if (observation.kind === "reset") {
+      // First observation or a stack switch: any ghost/reveal from another
+      // pile is stale — the new desk is nobody's ceremony.
+      popGhost = null;
+      revealId = null;
+    }
+  });
+
+  // The stale-reveal guard: the reveal flag is cleared by the card's own
+  // animationend — but a card that LEAVES the top mid-settle (a push lands
+  // over it) unmounts without ending its animation, and a lingering flag
+  // would hand a phantom bounce to the same id when it next resurfaces.
+  // Clearing here keeps the flag honest: it means exactly "this id is top
+  // BECAUSE a pop revealed it, and its settle is still owed."
+  $effect.pre(() => {
+    if (revealId !== null && revealId !== (stackNotes[0]?.id ?? null)) revealId = null;
+  });
 
   // -- Quick-add -----------------------------------------------------------
   let draft = $state("");
@@ -287,7 +338,9 @@
             note={topNote}
             concealed={editingId === topNote.id}
             landing={landingId === topNote.id}
+            revealed={revealId === topNote.id}
             onLanded={() => (landingId = null)}
+            onRevealed={() => (revealId = null)}
           />
         {/key}
         {#if editingId === topNote.id}
@@ -330,6 +383,19 @@
              so the deck renders empty — fine until T31's ghost. -->
         <p class="empty">The stack is empty.</p>
       {/if}
+      <!-- The T29 pop ceremony: a decorative ghost of the just-completed
+           note burns off ABOVE the already-updated pile. Rendered last in
+           the deck so DOM order paints it over the card and the buried
+           edges; absolute, pointer-events/aria-none (PopCeremony owns
+           those), keyed per departed note so a second pop mid-ceremony
+           restarts cleanly. The deck collapses to the empty line when the
+           pop empties the stack — the zero-box inset:0 overlay still
+           centers the ghost on the stage, where the pile was. -->
+      {#if popGhost !== null}
+        {#key popGhost.id}
+          <PopCeremony note={popGhost} onExtinguished={() => (popGhost = null)} />
+        {/key}
+      {/if}
     </div>
   </main>
 
@@ -339,13 +405,35 @@
          disabled while one is in flight: on a success mid-flight the top
          note CHANGES, so a second click would complete/toss the note
          revealed beneath (a double-pop); on a failure it would blindly
-         retry. The guard makes one action one click. -->
+         retry. The guard makes one action one click. T29 extends the same
+         window across the ceremony (popGhost): the ritual is the app's one
+         big moment — while the ghost burns, the row rests. The quick-add
+         deliberately stays live: typing ahead during the fire is allowed. -->
     <div class="actions">
-      <button type="button" class="done" onclick={onDone} disabled={acting !== null}> Done </button>
-      <button type="button" class="edit" onclick={startEdit} disabled={acting !== null}>
+      <button
+        type="button"
+        class="done"
+        onclick={onDone}
+        disabled={acting !== null || popGhost !== null}
+      >
+        Done
+      </button>
+      <button
+        type="button"
+        class="edit"
+        onclick={startEdit}
+        disabled={acting !== null || popGhost !== null}
+      >
         Edit
       </button>
-      <button type="button" class="toss" onclick={onToss} disabled={acting !== null}> Toss </button>
+      <button
+        type="button"
+        class="toss"
+        onclick={onToss}
+        disabled={acting !== null || popGhost !== null}
+      >
+        Toss
+      </button>
     </div>
     {#if actionError !== null}
       <p class="error" role="alert">{actionError}</p>

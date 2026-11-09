@@ -17,8 +17,8 @@
  *   else = Inter. The mockups' display sans (Epilogue) is deliberately NOT
  *   adopted — DESIGN.md §2 pins a quiet small sans and one voice; Inter is
  *   it. No separate mono font is bundled: --font-mono is a system stack.
- * - Ember/flame accents for the pop ceremony are DEFERRED to T29 (they will
- *   extend, not replace, this file).
+ * - Ember/flame accents for the pop ceremony LANDED with T29 (they extend,
+ *   not replace, this file) — see the --ember-* block below.
  * - All values are LIGHT-MODE-ONLY per DECISIONS.md §8 — but everything flows
  *   through custom properties so a dark "evening desk" theme can slot in
  *   without refactor.
@@ -112,6 +112,18 @@
   --gold-soft: #efe591;
   /* #d2c978 — secondary-fixed-dim. */
   --gold-dim: #d2c978;
+
+  /* -- Ember/flame accents (T29 pop ceremony; DESIGN.md §5.2 "warm flame,
+   *    ember glow — not scary, not an error tone — a celebration"; mockup
+   *    pop_ceremony_sequence/code.html: "warm golden flame (#FFE600 to
+   *    #FF4500)"). Used ONLY by components/PopCeremony.svelte — the fire
+   *    lives nowhere else. ------------------------------------------------ */
+  /* #ffe600 — the mockup's flame core / hottest ember. */
+  --ember-hot: #ffe600;
+  /* #ff9a3c — the mockup's warm ember mid-tone. */
+  --ember: #ff9a3c;
+  /* #ff4500 — the mockup's deep burn edge. */
+  --ember-deep: #ff4500;
 
   /* -- Note palette: EXACTLY 8, order-fixed (T25's colorIndex(id, 8) maps
    *    i → var(--note-{i}); the indices must not drift). Desktop
@@ -280,10 +292,23 @@
    *    shared. No colors here: the T24 token guard stays the color law. */
   /* The full push landing: drop + slap + settle in one pass. */
   --motion-push: 520ms;
+  /* The full pop ceremony (T29): lift → crumple → burn → drift in one pass.
+     Provenance: the mockup's per-phase annotations (280/340/520/400ms ≈
+     1540ms) rounded up; the ONE clock every ceremony layer (ghost, burn
+     radius, burn rim, ink, embers, the reveal's delay) shares so the phases
+     can never drift apart. */
+  --motion-pop: 1600ms;
+  /* The revealed note's own settle bounce (T29; the mockup's "3.2px subtle
+     spring oscillation", juiced slightly). Runs on the new top card, delayed
+     against --motion-pop so it lands as the last embers drift off. */
+  --motion-reveal: 480ms;
   /* The reduced-motion "simple fade" (§7; also the fallback T29/T30 reuse). */
   --motion-fade: 150ms;
   /* Gravity into the slap: starts slow-ish, hammers in — a fall, not a float. */
   --ease-drop: cubic-bezier(0.5, 0, 0.9, 0.6);
   /* Overshooting paper bounce: settles past rest, springs back. */
   --ease-spring: cubic-bezier(0.3, 1.35, 0.45, 1);
+  /* Unhurried ease-out for the ceremony's lift and its upward drift — a
+     levitation, not a launch. */
+  --ease-lift: cubic-bezier(0.2, 0.8, 0.25, 1);
 }

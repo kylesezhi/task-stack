@@ -4,7 +4,10 @@
    * mockup: stack_view_home) — the one card the desk centers on. T26 stacks
    * buried edges beneath it; the push spring lives here too (T27 — DESIGN.md
    * §7: the new note "drops in and slaps on with a springy bounce, tilting
-   * into place"); T29/T30 animate it away (ceremony, toss).
+   * into place"); T29's reveal settle lives here as well — when a pop
+   * ceremony reveals this card beneath the burning ghost, it springs up and
+   * settles with a tiny bounce (DESIGN.md §5.2 step 5; the burning ghost
+   * itself is PopCeremony's). T30 animates the card away on a toss.
    *
    * Every visual value is deterministic from the note id (lib/note-style):
    * same note → same tilt and color on every device, forever (DECISIONS.md
@@ -48,22 +51,39 @@
      * accessibility tree and text selection entirely (unlike opacity or
      * color, visibility:hidden is announced to nobody). */
     concealed?: boolean;
+    /** True while this card is the one a pop ceremony just revealed
+     * (StackView's pop tracker decides; the card only wears it). The
+     * settle bounce is delayed against --motion-pop so it lands as the
+     * ghost's last embers drift off. `landing` and `revealed` can never
+     * coincide: a landing id is brand-new to the pile, a revealed id was
+     * buried in it one observation ago (the two trackers' rules are
+     * disjoint by construction). */
+    revealed?: boolean;
     /** camelCase handler (house naming), called on the landing
      * animation's end so StackView can clear its landing flag. Defaults
      * to a no-op — the card renders fine wherever nobody cares. */
     onLanded?: () => void;
+    /** Same for the reveal settle (T29): clears StackView's reveal flag. */
+    onRevealed?: () => void;
   }
 
-  let { note, landing = false, concealed = false, onLanded = () => {} }: Props = $props();
+  let {
+    note,
+    landing = false,
+    concealed = false,
+    revealed = false,
+    onLanded = () => {},
+    onRevealed = () => {},
+  }: Props = $props();
 
   const tiltDegrees = $derived(noteTilt(note.id));
   const background = $derived(noteColorVar(note.id));
 
-  /** Guard on `landing`: exactly one animation can ever run on this card
-   * today (push-land), but a later ceremony animation's animationend
-   * hitting this same handler must not clear the landing flag. */
+  /** Guards on the flags: landing and revealed are mutually exclusive (see
+   * the prop docs), so each animation's end clears only its own flag. */
   function onAnimationEnd(): void {
     if (landing) onLanded();
+    if (revealed) onRevealed();
   }
 </script>
 
@@ -71,6 +91,7 @@
   class="card"
   class:landing
   class:concealed
+  class:revealed
   style:--card-tilt={tiltDegrees + "deg"}
   style:--card-color={background}
   onanimationend={onAnimationEnd}
@@ -223,14 +244,51 @@
     }
   }
 
+  /* -- Reveal settle (T29; DESIGN.md §5.2 step 5: "The note beneath is
+        revealed and settles with a tiny bounce"; mockup: the under-note's
+        3.2px spring oscillation, juiced slightly). Runs on the NEW top card
+        while the ghost (PopCeremony) burns above it. The delay pins the
+        bounce to the ghost's burn-out (~74% of the shared --motion-pop
+        clock); fill-mode: both makes the 0% frame authoritative during the
+        delay, so the card sits ever-so-slightly compressed — bearing the
+        departed note's weight — then springs past rest and settles. Same
+        contract as push-land: transform/opacity only, one fixed function
+        order (translateY → rotate → scale), and the 100% keyframe equals
+        the natural rest rule EXACTLY, so the settled pile is byte-identical
+        whether or not a ceremony animated (DECISIONS.md §3). */
+  .card.revealed {
+    animation: pop-reveal var(--motion-reveal) var(--ease-spring) calc(var(--motion-pop) * 0.74)
+      both;
+  }
+
+  @keyframes pop-reveal {
+    0% {
+      transform: translateY(2px) rotate(var(--card-tilt)) scale(0.985);
+    }
+    45% {
+      transform: translateY(-5px) rotate(var(--card-tilt)) scale(1.015);
+    }
+    72% {
+      transform: translateY(1.5px) rotate(var(--card-tilt)) scale(0.996);
+    }
+    100% {
+      transform: translateY(0) rotate(var(--card-tilt)) scale(1);
+    }
+  }
+
   /* Reduced motion (DESIGN.md §7: "every animation becomes a simple fade")
      — the codebase's FIRST prefers-reduced-motion block; this is the
      pattern T29/T30/T32 repeat: swap the named animation for a plain
      opacity-only fade at --motion-fade, no transform, so the element
      renders at rest instantly and fades in. Same 100%-equals-rest
-     property: the fade's end state is exactly the natural card. */
+     property: the fade's end state is exactly the natural card. The
+     revealed card cross-fades with the ghost's own fade (PopCeremony's
+     pop-ceremony-fade) — together they ARE the reduced-motion ceremony. */
   @media (prefers-reduced-motion: reduce) {
     .card.landing {
+      animation: push-fade var(--motion-fade) both;
+    }
+    .card.revealed {
       animation: push-fade var(--motion-fade) both;
     }
     @keyframes push-fade {

@@ -10,12 +10,16 @@
    * — a push lands; everything else (reload, reveal, reorder, edit, the
    * duplicate WS rebroadcast) stays still. The pop ceremony HAS landed
    * (T29): the rule is "the top id of the active stack departed AND
-   * landed in completed[]" (lib/pop-ceremony) — a pop burns; everything
+   * landed in completed[] (lib/departure) — a pop burns; everything
    * else (toss, reload, reorder, edit, switch, the WS rebroadcast) stays
-   * fire-free. The ghost is a decorative overlay of the departed note
+   * fire-free. The pop ghost is a decorative overlay of the departed note
    * playing above the ALREADY-updated pile, so the reveal beneath it is
-   * just the new top card wearing NoteCard's `revealed` settle. The
-   * toss's quiet crumple comes with T30, and the ghost-outline empty state's visuals with T31.
+   * just the new top card wearing NoteCard's `revealed` settle. The toss
+   * ceremony HAS landed too (T30; lib/departure answers BOTH departures):
+   * a toss plays TossCeremony's quiet crumple-and-drop above the pile —
+   * no revealId, no fire (DESIGN.md §7), and at most ONE desk ghost at a
+   * time (pop wins — see the departure observation effect below). The
+   * ghost-outline empty state's visuals still come with T31.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -35,9 +39,10 @@
   import NoteCard from "../components/NoteCard.svelte";
   import PeekingEdges from "../components/PeekingEdges.svelte";
   import PopCeremony from "../components/PopCeremony.svelte";
+  import TossCeremony from "../components/TossCeremony.svelte";
   import { hiddenNoteCount, peekingEdges } from "../lib/edge-style";
   import { PushLandingTracker } from "../lib/push-land";
-  import { PopCeremonyTracker } from "../lib/pop-ceremony";
+  import { DepartureTracker } from "../lib/departure";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown": the server invariant keeps the row findable, but
@@ -101,34 +106,55 @@
   });
   /* eslint-enable svelte/prefer-writable-derived */
 
-  // -- Pop ceremony (T29) ---------------------------------------------------
+  // -- Departure ceremonies (T29 pop + T30 toss) ----------------------------
   // Same instance-lifetime reasoning as the landing tracker above (the desk
   // stays mounted under every overlay, so observations are continuous). The
-  // tracker observes EVERY snapshot — local pops AND remote ones arriving
-  // over the WS fire identically — and StackView only spends its answer:
-  // `popGhost` is the departed note the ghost overlay re-enacts, `revealId`
-  // the new top that settles with the tiny bounce. The ghost clears itself
-  // via its own animationend (onExtinguished); the reveal flag via the
-  // card's (onRevealed).
-  const popTracker = new PopCeremonyTracker();
+  // tracker observes EVERY snapshot — local AND remote (WS) departures fire
+  // identically — and StackView only spends its answer:
+  // - "pop":  `popGhost` is the departed note the fire ghost re-enacts and
+  //   `revealId` the new top that settles with the tiny bounce;
+  // - "toss": `tossGhost` is the departed note the quiet crumple-and-drop
+  //   re-enacts. revealId is deliberately NOT set — DESIGN.md §7 grants the
+  //   toss no dance: the survivor just sits there under the dropping ball.
+  // The ghost clears itself via its own animationend (onExtinguished /
+  // onDropped); the reveal flag via the card's (onRevealed).
+  //
+  // ONE-DESK-GHOST RULE: at most one ceremony ghost exists at a time, and
+  // the POP wins. Concretely: a pop observation clears any active toss
+  // ghost (supersede — the archive-worthy departure takes the stage), and
+  // a toss observation arriving while a pop ghost is still burning is
+  // DROPPED (not queued — the toss's note vanished without trace, and
+  // stacking a second ghost mid-fire would read as confusion, not ritual).
+  // UI-side this is already unreachable (the action row is disabled for
+  // the whole window) — the rule guards the remote/WS pair where two
+  // different departures can arrive within one ghost's lifetime.
+  const departureTracker = new DepartureTracker();
   // Unlike landingId above, no RULE-OFF is needed: the rule reads these as
   // ordinary state because the flags are ALSO assigned from event callbacks
-  // (onExtinguished / onRevealed in the template), not only from effects.
+  // (onExtinguished / onDropped / onRevealed in the template), not only
+  // from effects.
   let popGhost = $state<Note | null>(null);
+  let tossGhost = $state<Note | null>(null);
   let revealId = $state<string | null>(null);
   // Presence in completed[] is the pop/toss discriminator (complete is a row
   // MOVE — the note keeps its uuid; toss archives nothing, DECISIONS.md §4).
   const completedIds = $derived(new Set(($snapshot?.completed ?? []).map((entry) => entry.id)));
 
   $effect.pre(() => {
-    const observation = popTracker.observe(activeStackId ?? "", stackNotes, completedIds);
+    const observation = departureTracker.observe(activeStackId ?? "", stackNotes, completedIds);
     if (observation.kind === "pop") {
+      // Pop wins over any active toss ghost (the one-desk-ghost rule above).
+      tossGhost = null;
       popGhost = observation.note;
       revealId = observation.revealedId;
+    } else if (observation.kind === "toss") {
+      // No second ghost while the pop burns: skip, don't queue (see rule).
+      if (popGhost === null) tossGhost = observation.note;
     } else if (observation.kind === "reset") {
       // First observation or a stack switch: any ghost/reveal from another
       // pile is stale — the new desk is nobody's ceremony.
       popGhost = null;
+      tossGhost = null;
       revealId = null;
     }
   });
@@ -383,9 +409,26 @@
              so the deck renders empty — fine until T31's ghost. -->
         <p class="empty">The stack is empty.</p>
       {/if}
+      <!-- The T30 toss ceremony: a decorative ghost of the just-tossed
+           note crumples and drops out of frame ABOVE the already-updated
+           pile — no fire (DESIGN.md §7), no revealId (the toss is the
+           quiet delete; the survivor beneath never springs). Rendered
+           BEFORE PopCeremony in the deck's DOM so, if the two ghosts ever
+           coexist (a pop observation while a toss ghost is mid-drop),
+           the pop paints above (the one-desk-ghost rule in the script
+           makes that a narrow window, but the paint order guarantees
+           which one reads if it happens). Identical overlay contract to
+           the pop: absolute, pointer-events/aria-none (TossCeremony owns
+           those), keyed per departed note, self-clearing via onDropped. -->
+      {#if tossGhost !== null}
+        {#key tossGhost.id}
+          <TossCeremony note={tossGhost} onDropped={() => (tossGhost = null)} />
+        {/key}
+      {/if}
       <!-- The T29 pop ceremony: a decorative ghost of the just-completed
-           note burns off ABOVE the already-updated pile. Rendered last in
-           the deck so DOM order paints it over the card and the buried
+           note burns off ABOVE the already-updated pile. Rendered LAST in
+           the deck so DOM order paints it over the toss ghost (the
+           one-desk-ghost paint contract above), the card, and the buried
            edges; absolute, pointer-events/aria-none (PopCeremony owns
            those), keyed per departed note so a second pop mid-ceremony
            restarts cleanly. The deck collapses to the empty line when the
@@ -406,15 +449,19 @@
          note CHANGES, so a second click would complete/toss the note
          revealed beneath (a double-pop); on a failure it would blindly
          retry. The guard makes one action one click. T29 extends the same
-         window across the ceremony (popGhost): the ritual is the app's one
-         big moment — while the ghost burns, the row rests. The quick-add
-         deliberately stays live: typing ahead during the fire is allowed. -->
+         window across the pop ceremony (popGhost): the ritual is the app's
+         one big moment — while the ghost burns, the row rests. T30 extends
+         it identically across the toss (tossGhost): while the quiet ball
+         drops, the row rests too (the survivor you'd otherwise act on is
+         the one the ghost is mid-competition with — see the one-desk-ghost
+         rule). The quick-add deliberately stays live: typing ahead during
+         either ceremony is allowed. -->
     <div class="actions">
       <button
         type="button"
         class="done"
         onclick={onDone}
-        disabled={acting !== null || popGhost !== null}
+        disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
         Done
       </button>
@@ -422,7 +469,7 @@
         type="button"
         class="edit"
         onclick={startEdit}
-        disabled={acting !== null || popGhost !== null}
+        disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
         Edit
       </button>
@@ -430,7 +477,7 @@
         type="button"
         class="toss"
         onclick={onToss}
-        disabled={acting !== null || popGhost !== null}
+        disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
         Toss
       </button>

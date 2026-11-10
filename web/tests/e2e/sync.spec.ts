@@ -4,12 +4,16 @@
  *
  * ONE sequential test, deliberately: the specs share this run's ONE DB
  * (web/playwright.config.ts) and spec files execute alphabetically — this
- * file sorts LAST ("sync" = "s-y" sorts after "stacks-drawer" = "s-t"), so
- * it must be a good citizen of whatever leftovers earlier specs produced:
- * it creates its own uniquely-named stack ("Sync desk") via the API (POST
+ * file sorts near the END ("sync" = "s-y" sorts after "stacks-drawer" =
+ * "s-t"; only toss-motion.spec.ts, the T30 spec, runs later), so it must
+ * be a good citizen of whatever leftovers earlier specs produced: it
+ * creates its own uniquely-named stack ("Sync desk") via the API (POST
  * makes it active, T10) and asserts only on that stack — presence of other
  * (leftover) rows is never asserted away. Its own leftovers (a stack with
- * one pending note and one completed entry) harm no one: nothing runs after.
+ * one pending note and one completed entry) harm no one: the later
+ * toss-motion spec is self-sufficient the same way (its own active "Toss
+ * desk" plus API-seeded notes), so nothing depends on what sits in the DB
+ * before or after either file.
  *
  * What this covers that the other specs do not: NOTE mutations landing in a
  * SECOND client via the WS broadcast. stacks-drawer.spec.ts (T20) covers a

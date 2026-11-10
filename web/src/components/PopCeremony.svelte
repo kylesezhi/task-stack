@@ -4,7 +4,7 @@
    * DECISIONS.md §7 "crumple via feTurbulence/displacement, burn via mask",
    * mockup: pop_ceremony_sequence) — the app's signature moment. StackView
    * mounts this over the deck the moment a snapshot says the top note was
-   * completed (local or remote — lib/pop-ceremony's tracker decides); the
+   * completed (local or remote — lib/departure's tracker decides); the
    * REAL pile beneath has already updated, so the new top card sits revealed
    * under the ghost for the whole sequence and settles with its own tiny
    * bounce (NoteCard's `revealed`) as the last embers drift off.

@@ -7,7 +7,10 @@
    * into place"); T29's reveal settle lives here as well — when a pop
    * ceremony reveals this card beneath the burning ghost, it springs up and
    * settles with a tiny bounce (DESIGN.md §5.2 step 5; the burning ghost
-   * itself is PopCeremony's). T30 animates the card away on a toss.
+   * itself is PopCeremony's). A TOSS plays no card-side motion at all:
+   * the pile updates and TossCeremony's ghost crumples-and-drops above it
+   * (DESIGN.md §7: "a quick crumple and the note drops out of frame. No
+   * fire for tossed notes") — this card simply becomes the survivor.
    *
    * Every visual value is deterministic from the note id (lib/note-style):
    * same note → same tilt and color on every device, forever (DECISIONS.md

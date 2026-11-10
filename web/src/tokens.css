@@ -302,6 +302,15 @@
      spring oscillation", juiced slightly). Runs on the new top card, delayed
      against --motion-pop so it lands as the last embers drift off. */
   --motion-reveal: 480ms;
+  /* The quick toss (T30; DESIGN.md §7 "Toss: a quick crumple and the note
+     drops out of frame. No fire for tossed notes", DECISIONS.md §7 "toss
+     gets a brief quiet crumple"): one short clock for anticipation →
+     crumple → ball → drop. Provenance: hand-tuned against T29's phased
+     clock — roughly a third of the pop's runtime, quickness IS the toss's
+     whole character. Shares the T29/T30 token split exactly (durations/
+     easings are tokens, choreography stays in the owning component), and
+     the reduced-motion share of the split reuses --motion-fade below. */
+  --motion-toss: 620ms;
   /* The reduced-motion "simple fade" (§7; also the fallback T29/T30 reuse). */
   --motion-fade: 150ms;
   /* Gravity into the slap: starts slow-ish, hammers in — a fall, not a float. */

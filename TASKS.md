@@ -250,7 +250,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   simple fade; performance spot-check stays smooth.
   Depends: T26, T18
 
-- [ ] **T30 · Toss animation** — S
+- [x] **T30 · Toss animation** — S
   Quick crumple + drop out of frame. No fire for tossed notes.
   **Done when:** visual review.
   Depends: T29

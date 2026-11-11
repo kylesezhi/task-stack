@@ -138,8 +138,10 @@
 
 <style>
   /* The overlay: same box and same centering as the pile beneath it
-     (.deck.pile is flex-column centered — the ghost lands exactly on the
-     departed card's spot) and the same architectural shape as
+     (.deck.pile is flex-column centered; when the last note is tossed,
+     T31's .empty-state wrapper holds the same --pile-w/--pile-h
+     footprint — either way the ghost lands exactly on the departed
+     card's spot) and the same architectural shape as
      PopCeremony's .ceremony: absolute inset:0 of the position:relative
      .deck, pointer-events none, unselectable. StackView renders this
      component BEFORE PopCeremony in the deck's DOM so, if the two ghosts

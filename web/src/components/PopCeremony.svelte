@@ -76,7 +76,16 @@
   }> = [
     { x: -18, y: -4, dx: -34, rise: -160, size: 6, at: 0.4, span: 0.34, color: "var(--ember-hot)" },
     { x: 6, y: 2, dx: 24, rise: -180, size: 5, at: 0.43, span: 0.32, color: "var(--ember)" },
-    { x: -4, y: -10, dx: -14, rise: -130, size: 4, at: 0.46, span: 0.28, color: "var(--ember-deep)" },
+    {
+      x: -4,
+      y: -10,
+      dx: -14,
+      rise: -130,
+      size: 4,
+      at: 0.46,
+      span: 0.28,
+      color: "var(--ember-deep)",
+    },
     { x: 14, y: -2, dx: 38, rise: -150, size: 6, at: 0.5, span: 0.3, color: "var(--ember-hot)" },
     { x: -10, y: 4, dx: -26, rise: -110, size: 4, at: 0.53, span: 0.26, color: "var(--ember)" },
     { x: 2, y: -6, dx: 12, rise: -170, size: 5, at: 0.56, span: 0.3, color: "var(--ember-hot)" },
@@ -188,10 +197,10 @@
   /* The overlay: same box and same centering as the pile beneath it
      (.deck.pile is flex-column centered — the ghost lands exactly on the
      departed card's spot). Last positioned child of .deck, so DOM order
-     paints it above the card and the buried edges — no z-index. The deck
-     collapses to the empty line when the pop empties the stack; a zero-box
-     inset:0 still centers the ghost on the stage's middle, which is where
-     the pile was. */
+     paints it above the card and the buried edges — no z-index. When the
+     pop empties the stack, the deck wraps T31's empty-state — the same
+     pile footprint — so the inset:0 overlay still centers the ghost
+     exactly where the pile was. */
   .ceremony {
     position: absolute;
     inset: 0;

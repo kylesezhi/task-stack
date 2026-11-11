@@ -255,7 +255,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** visual review.
   Depends: T29
 
-- [ ] **T31 · Empty stack state** — S
+- [x] **T31 · Empty stack state** — S
   Ghost outline where the stack was, "The stack is empty.", total stillness.
   **Done when:** matches DESIGN.md §5.1 empty state; nothing animates.
   Depends: T28

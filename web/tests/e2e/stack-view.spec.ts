@@ -37,6 +37,97 @@ test("push, Done, edit, and Toss behave like a stack", async ({ page, request })
   await expect(page.getByText("The stack is empty.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Done" })).toHaveCount(0);
 
+  // -- Phase 2b: T31 empty state — ghost outline at the pile's footprint,
+  //    total stillness (DESIGN.md §5.1: bare desk, faint ghost outline
+  //    where the stack was, one quiet line; §7: "empty stack: total
+  //    stillness — nothing moves") -----------------------------------------
+  const emptyState = page.locator(".empty-state");
+  const ghost = page.locator(".empty-state .ghost");
+  await expect(emptyState).toBeVisible();
+  await expect(ghost).toBeVisible();
+  // Decorative only: the outline is announced to nobody.
+  expect(await ghost.getAttribute("aria-hidden")).toBe("true");
+  // Outline, not a paper card: dashed 1px border, no background fill
+  // (computed styles evaluated in Node, then asserted).
+  const ghostStyle = await ghost.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return {
+      borderStyle: style.borderTopStyle,
+      borderWidth: style.borderTopWidth,
+      backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
+      boxShadow: style.boxShadow,
+    };
+  });
+  expect(ghostStyle.borderStyle).toBe("dashed");
+  expect(ghostStyle.borderWidth).toBe("1px");
+  expect(ghostStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  expect(ghostStyle.backgroundImage).toBe("none");
+  expect(ghostStyle.boxShadow).toBe("none");
+  // Pile silhouette + horizontal centering at the default desktop viewport
+  // (1280×720): the ghost occupies exactly where the pile was — 320×320
+  // at this width (--pile-w/--pile-h; ±1px subpixel tolerance) — centered
+  // in the stage.
+  const desktop = await emptyState.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const stage = el.closest("main");
+    const stageBox = stage?.getBoundingClientRect();
+    return {
+      width: box.width,
+      height: box.height,
+      centerX: box.left + box.width / 2,
+      stageCenterX: stageBox ? stageBox.left + stageBox.width / 2 : null,
+    };
+  });
+  expect(desktop.width).toBeGreaterThanOrEqual(319);
+  expect(desktop.width).toBeLessThanOrEqual(321);
+  expect(desktop.height).toBeGreaterThanOrEqual(319);
+  expect(desktop.height).toBeLessThanOrEqual(321);
+  expect(desktop.stageCenterX).not.toBeNull();
+  expect(Math.abs(desktop.centerX - (desktop.stageCenterX ?? 0))).toBeLessThanOrEqual(1);
+  // Total stillness: no Web Animations anywhere in the subtree, and the
+  // computed animation/transition channels are inert on the wrapper, the
+  // ghost, and the copy alike.
+  const stillness = await emptyState.evaluate((el) => {
+    const read = (node: Element) => {
+      const style = getComputedStyle(node);
+      return { animationName: style.animationName, transitionDuration: style.transitionDuration };
+    };
+    const nodes = [el, el.querySelector(".ghost"), el.querySelector(".empty")].filter(
+      (node): node is Element => node !== null,
+    );
+    return { animations: el.getAnimations({ subtree: true }).length, styles: nodes.map(read) };
+  });
+  expect(stillness.animations).toBe(0);
+  expect(stillness.styles).toHaveLength(3);
+  for (const style of stillness.styles) {
+    expect(style.animationName).toBe("none");
+    expect(style.transitionDuration).toBe("0s");
+  }
+  // T31 depends on T28: at the ~390px mobile floor the ghost keeps the
+  // responsive pile silhouette — width (100vw − 40)/1.13 ≈ 309.7px (>300,
+  // ≤316) and the flat 320px height (tokens.css) — stays horizontally
+  // centered, and the desk never opens a horizontal scroll.
+  await page.setViewportSize({ width: 390, height: 720 });
+  const mobile = await emptyState.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return {
+      width: box.width,
+      height: box.height,
+      centerX: box.left + box.width / 2,
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(mobile.width).toBeGreaterThan(300);
+  expect(mobile.width).toBeLessThanOrEqual(316);
+  expect(mobile.height).toBeGreaterThanOrEqual(319);
+  expect(mobile.height).toBeLessThanOrEqual(321);
+  expect(Math.abs(mobile.centerX - 195)).toBeLessThanOrEqual(10);
+  expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth);
+  // Restore the default viewport so later phases are unchanged.
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   // -- Phase 3: push guard — whitespace disabled, text enabled --------------
   const input = page.getByLabel("New note");
   const push = page.getByRole("button", { name: "Push" });

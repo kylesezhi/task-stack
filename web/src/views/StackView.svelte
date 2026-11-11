@@ -19,7 +19,9 @@
    * a toss plays TossCeremony's quiet crumple-and-drop above the pile —
    * no revealId, no fire (DESIGN.md §7), and at most ONE desk ghost at a
    * time (pop wins — see the departure observation effect below). The
-   * ghost-outline empty state's visuals still come with T31.
+   * ghost-outline empty state HAS landed (T31): a static dashed outline
+   * occupying exactly the pile's footprint behind the quiet line — total
+   * stillness (DESIGN.md §7), no animation or transition of any kind.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
@@ -336,8 +338,11 @@
          through edit mode too — read the .deck/.pile CSS and the T28 note
          below: the card never leaves the flow anymore, so the deck's box
          is the pile's box in EVERY state and nothing can jump. The EMPTY
-         state deliberately gets no footprint: its quiet centered line is
-         the pre-pile look (T31 owns its ghost visual). -->
+         state is no exception (T31): its quiet centered line is replaced
+         by the ghost wrapper — .empty-state spends --pile-w/--pile-h, so
+         the deck's box stays the pile's box in the EMPTY state too, the
+         desk silhouette never changes, and the ceremony overlays stay
+         centered exactly where the pile was. -->
     <div class="deck" class:pile={topNote !== null}>
       <PeekingEdges notes={peekingEdges(stackNotes)} hidden={hiddenNoteCount(noteCount)} />
       {#if topNote !== null}
@@ -404,10 +409,16 @@
           </form>
         {/if}
       {:else}
-        <!-- Quiet empty state (§5.1); the ghost-outline visual is T31.
-             noteCount 0 → peekingEdges([]) is [] and hiddenNoteCount is 0,
-             so the deck renders empty — fine until T31's ghost. -->
-        <p class="empty">The stack is empty.</p>
+        <!-- Empty state (T31; §5.1 + §7): the dashed ghost outline occupies
+             exactly the pile's footprint (--pile-w/--pile-h) and the quiet
+             line sits centered over it — and NOTHING here animates (total
+             stillness; see the .empty-state/.ghost rules). noteCount 0 →
+             peekingEdges([]) is [] and hiddenNoteCount is 0, so the deck's
+             only content is this wrapper. -->
+        <div class="empty-state">
+          <div class="ghost" aria-hidden="true"></div>
+          <p class="empty">The stack is empty.</p>
+        </div>
       {/if}
       <!-- The T30 toss ceremony: a decorative ghost of the just-tossed
            note crumples and drops out of frame ABOVE the already-updated
@@ -431,9 +442,10 @@
            one-desk-ghost paint contract above), the card, and the buried
            edges; absolute, pointer-events/aria-none (PopCeremony owns
            those), keyed per departed note so a second pop mid-ceremony
-           restarts cleanly. The deck collapses to the empty line when the
-           pop empties the stack — the zero-box inset:0 overlay still
-           centers the ghost on the stage, where the pile was. -->
+           restarts cleanly. When the pop empties the stack, the deck's
+           footprint is held by T31's .empty-state wrapper (the same
+           --pile-w/--pile-h silhouette), so the inset:0 overlay still
+           centers the ghost exactly where the pile was. -->
       {#if popGhost !== null}
         {#key popGhost.id}
           <PopCeremony note={popGhost} onExtinguished={() => (popGhost = null)} />
@@ -644,7 +656,42 @@
     justify-content: center;
   }
 
+  /* -- Empty state (T31; DESIGN.md §5.1 + §7) --
+     The wrapper OWNS the pile's footprint (--pile-w/--pile-h — the same
+     silhouette vars .deck.pile, NoteCard and PeekingEdges spend), so the
+     deck's box is the pile's box when the stack empties too: the ceremony
+     overlays (inset:0 of the deck) stay centered where the pile was and
+     the desk silhouette never changes between states. Contents centered
+     on both axes. TOTAL STILLNESS (§7 "empty stack: total stillness —
+     nothing moves"): no animation, transition, transform, or hover state
+     anywhere in this subtree — the ghost is static and axis-aligned. */
+  .empty-state {
+    position: relative;
+    width: var(--pile-w);
+    min-height: var(--pile-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The ghost: purely decorative (aria-hidden, pointer-events none), an
+     OUTLINE — not a paper card: dashed soft warm hairline on the note
+     radius, no background fill, no shadow, no illustration. Absolutely
+     positioned inset:0 so it hugs the wrapper's exact pile footprint. */
+  .ghost {
+    position: absolute;
+    inset: 0;
+    border: 1px dashed var(--outline-soft);
+    border-radius: var(--radius-note);
+    pointer-events: none;
+  }
+
   .empty {
+    margin: 0; /* reset the p default — the wrapper is the centering context */
+    text-align: center;
+    /* Modest inline padding: even a wrapped line never touches the dashed
+       edge (var(--space-sm), not a new spacing value). */
+    padding-inline: var(--space-sm);
     /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
        (FirstRunView precedent — the old #999 placeholder was ~2.85:1 on
        white, below WCAG AA; the token is darker than the old #555, so ≥
@@ -848,8 +895,9 @@
        must be guarded geometrically). 60px = 2 × that reach, because the
        stage CENTERS the deck (align/justify center) — the reserve must
        cover the poke on both sides, so the stage holds the pile's box
-       AND its edges at mobile. It also gives the empty-state line a real
-       centered stage again (T31's ghost renders inside it).
+       AND its edges at mobile. It covers the T31 empty state the same
+       way: the ghost wrapper takes the same --pile-h footprint, so the
+       reserve holds it (plus the same slack) centered.
        The strip itself: margin-top:auto (above) plus position:sticky
        bottom:0 — sticky, not fixed, so it stays inside the desk's flow
        (the flex column's last child) and rides up over scrolled content

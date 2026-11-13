@@ -1,0 +1,208 @@
+/* Shared paper-sheet layer (T32; sources: TASKS.md T32, DESIGN.md §2/§5.3/
+ * §5.4/§5.6/§7/§8, DECISIONS.md §8/§11) — the ONE stylesheet for what makes
+ * ListView, StacksDrawer, and ArchiveView the same family of warm-paper
+ * sheets over the desk.
+ *
+ * The scrim choice: the old T16 `.overlay` painted the sheet's own paper
+ * full-viewport. T32 splits the role in two — `.overlay` is now the fixed
+ * desk-level SCRIM (a translucent warm ink veil, color-mix over --ink, no
+ * backdrop-filter and no glass: DESIGN.md §2 bans "glassy"), and `.sheet`
+ * is the paper rectangle on top of it (white --paper for the centered
+ * list/archive sheets, warm --paper-warm for the left drawer), with the
+ * --shadow-sheet composite from tokens.css. The desk stays faintly visible
+ * under the veil, which is what makes the sheet read as SLID over the desk
+ * (§7) instead of replacing the page.
+ *
+ * Every color here is var()/color-mix over tokens.css — the T24 guard test
+ * enforces it. Durations/easings: the scrim's fade is a literal 160ms in
+ * each view's in:fade — intro-only, so an outro's out() is a no-op and the
+ * overlay is never marked inert; the still-mounted scrim keeps blocking
+ * desk input until the sheet's outro finishes and the block is removed,
+ * while the sheet subtree itself is inert during its slide-out (a backdrop
+ * veil needs no shared clock); the SHEET slide runs on
+ * --motion-sheet/--motion-sheet-out via web/src/lib/sheet-motion.ts.
+ *
+ * Durable-class note: `.overlay` is an e2e locator (responsive-layouts
+ * scrollProbe) and StackView's connection strip stacks above it (z-index
+ * 20); keep both names and the layering.
+ */
+
+/* -- The scrim: fixed full-viewport desk veil + scroll container ------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* A scroll container, not a page-scroller: the overlay scrolls, never
+   * the desk — wheel over the sheet scrolls the overlay (long sheets grow
+   * the paper and scroll inside the overlay, e.g. a long drawer). */
+  overscroll-behavior: contain;
+  /* The warm ink veil (the scrim choice above). */
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* Generous air above the sheet; the sheet caps at 44rem so wide desks
+   * keep the ambient-centered mood (§8). */
+  padding: var(--margin) var(--gutter);
+}
+
+/* Drawer variant: the sheet pins to the LEFT edge at full height — no
+ * padding, flex-start alignment (§5.4 "slides in from the left").
+ * flex-start (the base .overlay value, not stretch): the sheet is then
+ * auto-height with min-height: 100dvh — short stacks stay full-height
+ * (.sheet-body's flex: 1 pushes the create footer down), long stacks grow
+ * the paper and the overlay scrolls instead of the content overflowing it. */
+.overlay--drawer {
+  padding: 0;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+/* -- The paper rectangle ------------------------------------------------ */
+.sheet {
+  width: 100%;
+  max-width: 44rem;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Drawer variant: a tall side sheet off the left edge; warm (paper-warm)
+ * so the two sheet kinds read differently, rounded only on the right
+ * (the left edge bleeds off-screen), no left border. min-height: 100vh
+ * first, then 100dvh — the T28 dvh cascade (DECISIONS.md §11). The sheet
+ * is auto-height (the overlay's flex-start alignment): min-height keeps
+ * short stacks full-height while long stacks grow the paper past the
+ * viewport and scroll inside the overlay. */
+.sheet--drawer {
+  width: min(22rem, 88vw);
+  max-width: none;
+  min-height: 100vh; /* pre-dvh fallback */
+  min-height: 100dvh; /* evergreen dynamic viewport (DECISIONS.md §11) */
+  border-radius: 0 var(--radius-sheet) var(--radius-sheet) 0;
+  border-left: none;
+  background: var(--paper-warm);
+}
+
+/* -- Shared header: heading + count + Close ---------------------------- */
+.sheet-header {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+  border-bottom: 1px solid var(--paper-edge);
+  min-width: 0;
+}
+
+.sheet-heading {
+  margin: 0;
+  font-size: var(--text-headline);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink-body);
+  min-width: 0;
+  /* The 80-char unbroken stack-name guard (§9, STACK_NAME_MAX_LENGTH):
+   * the heading can never stretch the header past the sheet. */
+  overflow-wrap: anywhere;
+}
+
+/* The "N notes" / "N done" / "N stacks" chip: quiet label register. */
+.sheet-count {
+  color: var(--ink-quiet);
+  font-size: var(--text-label-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* Close: a real text button (keyboard/AT-honest), quiet until touched. */
+.sheet-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-note);
+  cursor: pointer;
+  font-size: var(--text-label-lg);
+  letter-spacing: 0.02em;
+}
+
+.sheet-close:hover {
+  background: var(--paper-shade);
+  color: var(--ink-body);
+}
+
+/* -- Shared body -------------------------------------------------------- */
+.sheet-body {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+/* -- Shared paper input slip --------------------------------------------
+ * Quick-add-style text inputs inside any sheet render as the small paper
+ * slip (the mockup's input surface): white paper, hairline edge, the
+ * --shadow-input composite. Scoped under .sheet so desk inputs (StackView's
+ * quick-add, FirstRun) keep their own treatments. */
+.sheet input[type="text"] {
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-note);
+  box-shadow: var(--shadow-input);
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--ink-body);
+  font-size: var(--text-body-md);
+  min-width: 0;
+}
+
+/* Quiet, clearly-visible focus: never removes the UA outline elsewhere —
+ * this only restyles the sheet inputs' own ring. :focus-visible matches
+ * text inputs whenever they are focused (keyboard AND click), so the
+ * behavior is uniform. */
+.sheet input[type="text"]:focus-visible {
+  outline: 2px solid var(--accent-soft-deep);
+  outline-offset: 1px;
+  box-shadow: var(--shadow-input-focus);
+}
+
+/* -- Mobile (≤640px; the breakpoint literal's documentation home is
+ *    tokens.css) — the sheet keeps a small breathing gutter, headers and
+ *    bodies tighten, and the drawer narrows a touch. --------------------- */
+@media (max-width: 640px) {
+  .overlay {
+    padding: var(--gutter-mobile);
+  }
+
+  /* Re-assert the drawer's flush pin: this .overlay rule has equal
+   * specificity and comes later in the file's cascade distance than
+   * .overlay--drawer's base rule, so without this the drawer would be
+   * inset by --gutter-mobile and its 100dvh sheet would overflow the
+   * viewport by twice the gutter. The drawer stays flush left/top. */
+  .overlay--drawer {
+    padding: 0;
+  }
+
+  .sheet {
+    max-width: 100%;
+  }
+
+  .sheet-header {
+    padding: var(--space-md) var(--space-md) var(--space-sm);
+  }
+
+  .sheet-body {
+    padding: var(--space-xs) var(--space-md) var(--space-md);
+  }
+
+  .sheet--drawer {
+    width: min(20rem, 88vw);
+  }
+}

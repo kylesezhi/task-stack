@@ -11,6 +11,10 @@
  * scrollbars) from going dark behind the warm palette.
  */
 @import "./tokens.css";
+/* T32's shared paper-sheet layer (.overlay scrim + .sheet) — imported right
+ * after the tokens so the sheet rules sit as close to the token source as
+ * the cascade allows. Its own header documents the layer split. */
+@import "./sheets.css";
 
 *,
 *::before,
@@ -41,34 +45,10 @@ textarea {
   font-family: inherit;
 }
 
-/* T16 mechanics shell: overlays cover the desk as fixed full-viewport sheets
- * so the closed/open state is actually visible without any design work (the
- * real paper sheets are T32; details are Phase 3's). The connection note in
- * App.svelte rides at a higher z-index.
- *
- * T28 (DESIGN.md §8; TASKS.md T28): the ONE .overlay class is the shared
- * sheet hook — ListView, StacksDrawer, and ArchiveView all carry it, so
- * the responsive gutter/block padding is styled exactly once here for all
- * three sheets, desktop and mobile. Spacing comes only from the T24
- * tokens (app.css header): --gutter inline (swapped to --gutter-mobile in
- * the ≤640px block documented in tokens.css), --space-md leading and
- * --space-lg trailing the sheet's content block. */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  overflow-y: auto;
-  background: var(--paper);
-  padding-inline: var(--gutter);
-  padding-block: var(--space-md) var(--space-lg);
-}
-
-@media (max-width: 640px) {
-  /* The mobile gutter pair, per tokens.css' breakpoint documentation. */
-  .overlay {
-    padding-inline: var(--gutter-mobile);
-  }
-}
+/* T16 mechanics shell → T32: the overlays are now the shared paper-sheet
+ * layer, and their rules live in web/src/sheets.css (imported above). This
+ * file keeps only the desk ground; the connection note in App.svelte still
+ * rides at a higher z-index than the sheets' z-index 10. */
 
 /* T29 pop ceremony: registering --burn-r is what makes the burn radius
  * ANIMATABLE — an unregistered custom property only ever flips discretely,

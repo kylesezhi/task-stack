@@ -260,7 +260,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** matches DESIGN.md §5.1 empty state; nothing animates.
   Depends: T28
 
-- [ ] **T32 · Sheet + list polish** — M
+- [x] **T32 · Sheet + list polish** — M
   ListView and StacksDrawer as sliding paper sheets; archive rows/chips per
   DESIGN.md §5.3–5.6.
   **Done when:** visual review of all three overlays against DESIGN.md.

@@ -257,6 +257,11 @@
   /* -- Radius: mockup scale; defined only (T25 applies). ------------------- */
   --radius-note: 4px;
   --radius-pill: 9999px;
+  /* The paper-sheet corner (T32): the sheet/modal radius — 0.5rem, softer
+   * than the note's 4px so the big surfaces read as paper cards, not
+   * sticky notes. List/archive sheets, the drawer, the kebab menu, and
+   * the delete-confirm modal all share it. */
+  --radius-sheet: 0.5rem;
 
   /* -- T25 note material: composite values VERBATIM from the mockups, same
    *    rationale as the shadows above — mockup data, not per-component mixing
@@ -313,6 +318,14 @@
   --motion-toss: 620ms;
   /* The reduced-motion "simple fade" (§7; also the fallback T29/T30 reuse). */
   --motion-fade: 150ms;
+  /* The paper-sheet slide in (T32; §7 "Open/close list & drawers: paper
+     sheets slide"): hand-tuned — shorter than the push (a sheet slides
+     onto the desk, it doesn't fall onto it). Out is faster than in
+     (closing is an exit, not an arrival); reduced motion uses --motion-fade
+     (sheet-motion.ts reads these tokens and mirrors them with the same
+     fallbacks). */
+  --motion-sheet: 240ms;
+  --motion-sheet-out: 180ms;
   /* Gravity into the slap: starts slow-ish, hammers in — a fall, not a float. */
   --ease-drop: cubic-bezier(0.5, 0, 0.9, 0.6);
   /* Overshooting paper bounce: settles past rest, springs back. */

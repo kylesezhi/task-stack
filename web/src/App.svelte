@@ -94,7 +94,7 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 20; /* above the overlay sheets (z-index 10 in app.css) */
+    z-index: 20; /* above the overlay sheets (z-index 10, web/src/sheets.css) */
     /* Clicks must pass through to the controls beneath (tradeoff above) —
      * an opaque blocking strip would disable Close and the top chrome. */
     pointer-events: none;

@@ -231,6 +231,24 @@ test("the desk and its sheets stay inside the viewport at every breakpoint", asy
   await page.getByRole("button", { name: "Stacks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Stacks" })).toBeVisible();
   await expectNoHorizontalScroll(page);
+  // T32 review guard: the drawer sheet must stay FLUSH — left edge and top
+  // edge at the viewport origin (no --gutter-mobile inset; the ≤640px
+  // .overlay padding re-assert keeps .overlay--drawer at padding: 0) and
+  // full-height when short (min-height: 100dvh, not stretched/inset).
+  // expect.poll first (the list-view poll pattern): sheetIn's x-axis fly
+  // holds the sheet at x −48..0 for ~240ms, so |x| settles to ≤1 before
+  // the one-shot geometry read below.
+  await expect
+    .poll(async () => {
+      const box = await page.locator(".sheet--drawer").boundingBox();
+      return box === null ? Infinity : Math.abs(box.x);
+    })
+    .toBeLessThanOrEqual(1);
+  const drawerSheet = await page.locator(".sheet--drawer").boundingBox();
+  if (drawerSheet === null) throw new Error("drawer sheet bounding box unavailable");
+  expect(Math.abs(drawerSheet.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(drawerSheet.y)).toBeLessThanOrEqual(1);
+  expect(drawerSheet.height).toBeGreaterThanOrEqual(PHONE.height - 1);
   // The drawer row's kebab opens its menu (thumb-sized per T28 §9).
   await page.getByRole("button", { name: `Actions for ${STACK}` }).click();
   await expect(page.getByRole("button", { name: "Rename", exact: true })).toBeVisible();

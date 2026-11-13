@@ -1,30 +1,36 @@
 <script lang="ts">
   /**
-   * ListView mechanics (T19; sources: TASKS.md T19, DESIGN.md §5.3,
-   * DECISIONS.md §3/§4/§11) — the sheet over the desk: ordered rows of the
-   * active stack's notes with drag-to-reorder, per-row edit and toss. The
-   * header ("<stack> — N notes", Close, §5.3) and the .overlay chrome are
-   * T16's, kept as built.
+   * ListView (T19 mechanics + T32 sheet polish; sources: TASKS.md T19/T32,
+   * DESIGN.md §5.3/§7, DECISIONS.md §3/§4/§11) — the paper sheet over the
+   * desk: ordered rows of the active stack's notes with drag-to-reorder,
+   * per-row edit and toss. The T32 layer (web/src/sheets.css) turns the old
+   * T16 mechanics shell into the shared sheet language: a scrim `.overlay`
+   * + a `.sheet` paper rectangle, the sheet sliding in/out via
+   * lib/sheet-motion (§7 "paper sheets slide"; reduced motion → fade).
    *
    * -- Drag-to-reorder ------------------------------------------------------
-   * Pointer Events, not HTML5 drag-and-drop: pointerdown on the row's
-   * ⠿ handle starts a drag (preventDefault suppresses text selection and the
+   * Pointer Events, not HTML5 drag-and-drop: pointerdown on the row's ⠿
+   * handle starts a drag (preventDefault suppresses text selection and the
    * compatibility mouse-event stream), the WINDOW pointermove/pointerup/
    * pointercancel handlers on <svelte:window> drive it, and
-   * `touch-action: none` on the handle keeps the gesture a drag (touch
-   * polish is T28). Svelte owns these listeners' lifecycle — unmount removes
-   * them — so if App.svelte's window-level Esc closes the overlay mid-drag,
-   * the component unmounts and the drag dies with zero leaked listeners
+   * `touch-action: none` on the handle keeps the gesture a drag. Svelte
+   * owns these listeners' lifecycle — unmount removes them — so if
+   * App.svelte's window-level Esc closes the overlay mid-drag, the
+   * component unmounts and the drag dies with zero leaked listeners
    * (keyboard polish / drag-cancel-on-Esc is T33's; here Esc closing the
    * sheet mid-drag is accepted behavior). Listeners are NOT hand-rolled and
    * there is deliberately no onDestroy cleanup.
    *
    * Hit-testing is pure geometry: the pointer's clientY against the row
    * elements' CURRENT getBoundingClientRect(), re-measured per event (WS
-   * updates can re-render rows mid-drag). No drag-follow: the dragged row
-   * stays in its slot with a `.dragging` class, the current drop target
-   * gets a `.drop-target` highlight; transforms tracking the pointer and
-   * the paper visuals are T32.
+   * updates can re-render rows mid-drag). NO DRAG-FOLLOW — this is the
+   * delivered T32 choice, not a deferred TODO: hit-testing reads the live
+   * row rects, so a row translated under the pointer would move the
+   * geometry it is being hit-tested against and corrupt the very slot it
+   * is dropped into. Instead the dragged row lifts IN PLACE (`.dragging`
+   * raises it out of the list's paper rhythm with an edge highlight) and
+   * the current drop target gets the quiet accent inset rail (`.drop-
+   * target`) — quiet, no layout shift, honest hit-testing.
    *
    * Commits are guarded one-at-a-time: by the time a reorder PUT starts, the
    * drag is already ended (pointerup clears draggedId/dropTargetId before
@@ -63,11 +69,22 @@
    * beneath this sheet, so a duplicate id would be invalid HTML. Row toss
    * guards per row, and the row disappears via the snapshot — no manual
    * removal code (the snapshot drives the UI; DECISIONS.md §11).
+   *
+   * -- Row actions (T32) ----------------------------------------------------
+   * The per-row Edit/Toss controls are quiet ghost icon buttons (pencil / ×)
+   * with aria-labels carrying the accessible names — the tests locate them
+   * by role + name, not by visible text. They are revealed by row
+   * hover/focus-within via OPACITY on hover-capable desktop (never
+   * display:none — that would drop them from the tab order), and are always
+   * visible at ≤640px or on non-hover devices (§5.3 "small quiet row actions
+   * on hover/focus").
    */
+  import { fade } from "svelte/transition";
   import { snapshot, editNote, reorderNotes, tossNote } from "../lib/store";
   import { closeOverlay } from "../lib/view";
   import { reorderNoteIds } from "../lib/reorder";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
+  import { sheetIn, sheetOut } from "../lib/sheet-motion";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown" / ?? null: a view must never crash on a missing
@@ -247,171 +264,199 @@
   onpointercancel={onPointerCancel}
 />
 
-<section class="overlay">
-  <header>
-    <h2>
-      {activeStack?.name ?? "unknown"} — {stackNotes.length}
-      {stackNotes.length === 1 ? "note" : "notes"}
-    </h2>
-    <button type="button" onclick={closeOverlay}>Close</button>
-  </header>
-  <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
-       the document's only <main>; sheets are dialogs, not mains. Full focus
-       management (inert background, aria-modal) is deferred to T33. -->
-  <div class="body">
-    {#if stackNotes.length === 0}
-      <!-- DESIGN.md §5.3's empty-list copy; reachable by tossing the last
-           notes from within the sheet itself, or by a remote mutation
-           emptying the stack while the sheet is open — but never by OPENING
-           it with zero notes, since StackView's "See all N" footer renders
-           only when N > 0. -->
-      <p class="empty">Nothing buried. Lucky you.</p>
-    {:else}
-      <ol class="rows">
-        {#each stackNotes as note (note.id)}
-          <li
-            class="row"
-            class:dragging={draggedId === note.id}
-            class:drop-target={dropTargetId === note.id}
-            bind:this={rowNodes[note.id]}
-          >
-            {#if editingId === note.id}
-              <form class="edit" onsubmit={onEditSubmit}>
-                <label class="visually-hidden" for="list-note-text">Note text</label>
-                <input
-                  id="list-note-text"
-                  type="text"
-                  bind:value={editDraft}
-                  maxlength={NOTE_TEXT_MAX_LENGTH}
-                  autocomplete="off"
-                  onkeydown={onEditKeydown}
-                  use:focusOnMount
-                />
-                <button type="submit" disabled={!canSave}>Save</button>
-                <button type="button" onclick={cancelEdit}>Cancel</button>
-              </form>
-            {:else}
-              <button
-                type="button"
-                class="handle"
-                aria-label="Drag to reorder"
-                onpointerdown={(event) => startDrag(event, note.id)}
-              >
-                ⠿
-              </button>
-              <span class="note-text">{note.text}</span>
-              <span class="row-actions">
+<!-- The scrim fades in only (`in:fade`, a plain 160ms — a backdrop veil needs
+     no shared clock, and a fade is already the reduced-motion-safe shape).
+     Intro-only matters: an intro transition's out() is a no-op, so the
+     overlay is never marked inert; the still-mounted scrim keeps blocking
+     desk input until the sheet's outro finishes and the block is removed,
+     while the sheet subtree itself is inert during its slide-out. The SHEET
+     slides (lib/sheet-motion: --motion-sheet, fade under reduced motion). -->
+<div class="overlay" in:fade={{ duration: 160 }}>
+  <section class="sheet" in:sheetIn={{ y: 20 }} out:sheetOut={{ y: 12 }}>
+    <header class="sheet-header">
+      <!-- The accessible name stays "<stack> — N notes" (e2e asserts it);
+           the count tail is a .sheet-count span for the quiet label look. -->
+      <h2 class="sheet-heading">
+        {activeStack?.name ?? "unknown"} —
+        <span class="sheet-count"
+          >{stackNotes.length} {stackNotes.length === 1 ? "note" : "notes"}</span
+        >
+      </h2>
+      <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
+    </header>
+    <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
+         the document's only <main>; sheets are dialogs, not mains. Full focus
+         management (inert background, aria-modal) is deferred to T33. -->
+    <div class="sheet-body">
+      {#if stackNotes.length === 0}
+        <!-- DESIGN.md §5.3's empty-list copy; reachable by tossing the last
+             notes from within the sheet itself, or by a remote mutation
+             emptying the stack while the sheet is open — but never by OPENING
+             it with zero notes, since StackView's "See all N" footer renders
+             only when N > 0. -->
+        <p class="empty">Nothing buried. Lucky you.</p>
+      {:else}
+        <ol class="rows">
+          {#each stackNotes as note (note.id)}
+            <li
+              class="row"
+              class:dragging={draggedId === note.id}
+              class:drop-target={dropTargetId === note.id}
+              bind:this={rowNodes[note.id]}
+            >
+              {#if editingId === note.id}
+                <form class="edit" onsubmit={onEditSubmit}>
+                  <label class="visually-hidden" for="list-note-text">Note text</label>
+                  <input
+                    id="list-note-text"
+                    type="text"
+                    bind:value={editDraft}
+                    maxlength={NOTE_TEXT_MAX_LENGTH}
+                    autocomplete="off"
+                    onkeydown={onEditKeydown}
+                    use:focusOnMount
+                  />
+                  <button type="submit" class="save" disabled={!canSave}>Save</button>
+                  <button type="button" class="cancel" onclick={cancelEdit}>Cancel</button>
+                </form>
+              {:else}
                 <button
                   type="button"
-                  class="row-action"
-                  onclick={() => startEdit(note.id, note.text)}
-                  disabled={draggedId !== null}
+                  class="handle"
+                  aria-label="Drag to reorder"
+                  onpointerdown={(event) => startDrag(event, note.id)}
                 >
-                  Edit
+                  ⠿
                 </button>
-                <button
-                  type="button"
-                  class="row-action"
-                  onclick={() => onToss(note.id)}
-                  disabled={tossingId !== null || draggedId !== null}
-                >
-                  Toss
-                </button>
-              </span>
-            {/if}
-          </li>
-        {/each}
-      </ol>
-    {/if}
-    {#if actionError !== null}
-      <p class="error" role="alert">{actionError}</p>
-    {/if}
-  </div>
-</section>
+                <!-- .note-text is a durable e2e locator — the class lives
+                     where the TEXT lives. -->
+                <span class="note-text">{note.text}</span>
+                <span class="row-actions">
+                  <button
+                    type="button"
+                    class="row-action"
+                    aria-label="Edit"
+                    onclick={() => startEdit(note.id, note.text)}
+                    disabled={draggedId !== null}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="row-action toss"
+                    aria-label="Toss"
+                    onclick={() => onToss(note.id)}
+                    disabled={tossingId !== null || draggedId !== null}
+                  >
+                    ×
+                  </button>
+                </span>
+              {/if}
+            </li>
+          {/each}
+        </ol>
+      {/if}
+      {#if actionError !== null}
+        <p class="error" role="alert">{actionError}</p>
+      {/if}
+    </div>
+  </section>
+</div>
 
 <style>
-  section {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 1.1rem;
-    /* T28 worst-case guard (§9; STACK_NAME_MAX_LENGTH): the header renders
-       "<name> — N notes" with no wrap guard today, so a valid 80-char
-       unbroken stack name (~700px min-content) opened a horizontal
-       scrollbar in the fixed sheet at 390px and pushed Close out of
-       reach. overflow-wrap: anywhere is the same 80-char guard the desk
-       chrome title and the drawer's modal copy already carry (T28's
-       worst-case pass missed this surface); min-width: 0 is what lets the
-       flex item shrink below its min-content, so the space-between header
-       keeps Close pinned to the right edge. */
-    overflow-wrap: anywhere;
-    min-width: 0;
-  }
-
-  .body {
-    flex: 1;
+  /* The sheet's body centers its contents (the flat rows fill the width;
+   * the empty state and the error line center inside it). Padding and the
+   * paper background come from the shared layer (web/src/sheets.css). */
+  .sheet-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
   }
 
-  /* Minimal readable rows — the paper look is T32. */
+  /* -- The flat ledger of rows (§5.3: deliberately plain — top of stack
+   * first, no grouping, no boxes around rows; rows separate on a hairline
+   * and the paper tone shifts on hover instead of drawing a border). ---- */
   .rows {
     width: 100%;
-    max-width: 28rem;
     margin: 0;
     padding: 0;
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
   }
 
   .row {
+    min-height: 3.25rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--paper-edge);
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    background: transparent;
+    transition: background-color 120ms var(--ease-lift);
   }
 
-  /* Subtle in-place marker only: the row does NOT follow the pointer (no
-     transforms — drag-follow and paper visuals are T32's). */
+  /* Hairline between rows; the last row has no bottom border. */
+  .row + .row {
+    border-top: 1px solid var(--paper-edge);
+  }
+
+  /* The row lifts in place on hover/focus — the sheet's warm tone, no
+     border, no shadow, no layout shift. */
+  .row:hover,
+  .row:focus-within {
+    background: var(--paper-warm);
+  }
+
+  /* The dragged row (T32 delivered): it does NOT follow the pointer (see
+     the script head — hit-testing reads the live row rects, so a
+     translated row would corrupt its own drop geometry). It lifts in its
+     slot instead: the warm tone plus the shallowest buried-note shadow
+     (a raised paper card) and a soft warm edge. */
   .row.dragging {
-    opacity: 0.5;
+    background: var(--paper-warm);
+    box-shadow: var(--shadow-note-edge-near);
+    outline: 1px solid var(--outline-soft);
   }
 
-  /* Highlight of the current drop target (pure-geometry hit-test). */
+  /* The current drop target (pure-geometry hit-test): a quiet accent tint
+     and a 2px accent inset rail on the left — reads as "this slot", never
+     as a layout change. */
   .row.drop-target {
-    border-color: var(--ink-muted);
+    background: color-mix(in srgb, var(--accent-soft) 18%, var(--paper));
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .handle {
     /* `touch-action: none`: a touch drag is a drag, not a scroll (T28). */
     touch-action: none;
     cursor: grab;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
     background: none;
     border: none;
-    color: var(--ink-muted);
-    padding: 0 0.25rem;
+    border-radius: var(--radius-note);
+    color: var(--ink-quiet);
+    padding: 0;
+    transition: color 120ms var(--ease-lift);
+  }
+
+  /* Hover/focus-within darkens the quiet ink (row hover AND handle hover). */
+  .row:hover .handle,
+  .row:focus-within .handle,
+  .handle:hover {
+    color: var(--ink-body);
   }
 
   .note-text {
-    /* DESIGN.md §2: list rows keep the handwritten voice — Caveat, per
-       §5.3 ("handwritten note text"). */
+    /* DESIGN.md §2/§5.3: list rows keep the handwritten voice — Caveat,
+       slightly smaller than the desk's top note (§5.3 rows are ledger
+       lines, not the pile's centerpiece). */
     font-family: var(--font-hand);
+    font-size: 1.35rem;
+    line-height: 1.3;
+    font-weight: 600;
+    color: var(--ink);
     flex: 1;
     min-width: 0;
     /* T28 worst-case guard (§9; shared/src/validation.ts
@@ -422,28 +467,63 @@
     overflow-wrap: anywhere;
   }
 
+  /* -- Row actions: quiet ghost icon buttons (T32), revealed on row
+     hover/focus-within via opacity (never display:none — the buttons stay
+     in the tab order; §5.3 "small quiet row actions on hover/focus"). -- */
   .row-actions {
+    flex: none;
     display: flex;
-    gap: 0.25rem;
+    gap: var(--space-xs);
+    opacity: 0;
+    transition: opacity 120ms var(--ease-lift);
   }
 
-  .row-actions button {
+  .row:hover .row-actions,
+  .row:focus-within .row-actions {
+    opacity: 1;
+  }
+
+  .row-action {
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
     background: none;
     border: none;
+    border-radius: var(--radius-note);
     color: var(--ink-muted);
     cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
   }
 
-  .row-actions button:disabled {
+  .row-action:hover {
+    background: var(--paper-shade);
+    color: var(--ink-body);
+  }
+
+  /* Toss leans accent on hover — the quiet vermilion cue of "this removes
+     the note" (the app's one loud color doing quiet work). */
+  .row-action.toss:hover {
+    color: var(--accent);
+  }
+
+  .row-action:disabled {
     cursor: default;
     color: var(--ink-quiet);
+    background: none;
   }
 
+  /* -- Inline edit: the shared paper slip input (sheets.css) plus the
+     paper-shade Save chip (accent ink) and a quiet ghost Cancel. The row's
+     min-height keeps the edit form from changing the row's height. ----- */
   .edit {
     flex: 1;
     min-width: 0;
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: var(--space-sm);
   }
 
   /* The row's inline edit input takes the space beside Save/Cancel
@@ -454,7 +534,45 @@
     min-width: 0;
   }
 
+  .edit .save {
+    flex: none;
+    background: var(--paper-shade);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-note);
+    color: var(--accent);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-md);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .edit .save:disabled {
+    color: var(--ink-quiet);
+    cursor: default;
+  }
+
+  .edit .cancel {
+    flex: none;
+    background: none;
+    border: none;
+    border-radius: var(--radius-note);
+    color: var(--ink-muted);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-md);
+    cursor: pointer;
+  }
+
+  .edit .cancel:hover {
+    background: var(--paper-shade);
+    color: var(--ink-body);
+  }
+
   .empty {
+    margin: 0;
+    width: 100%;
+    text-align: center;
+    /* Generous vertical air — the empty sheet is a resting surface. */
+    padding: var(--space-xl) 0;
     /* var(--ink-muted), not a lighter gray: real copy's quiet-ink floor
        (StackView precedent — the old #999 placeholder was ~2.85:1 on white,
        below WCAG AA; the token is darker than the old #555, so the floor
@@ -481,25 +599,25 @@
     font-size: 0.9rem;
   }
 
-  /* -- Mobile (≤640px; TASKS.md T28 §9 walkthrough guarantee): thumb-sized
-     hit floors for the small per-row controls. The breakpoint literal is
-     documented once in tokens.css; every repetition cites it. */
-  @media (max-width: 640px) {
-    /* Drag handle + row actions: each control's OWN ≥44px hit floor
-       (min-height) plus comfortable padding — the 44px is the control's
-       box, not something the row's padding supplies. Deliberate boundary:
-       the labeled sheet buttons (Close/Save/Cancel) keep their current
-       comfortable padded sizes — T28's explicit size mandate is the
-       thumb-sized Done only (TASKS.md T28); everything else must merely
-       be REACHABLE (proven by the walkthrough), and the sheets' real
-       button treatment is T32/T33's. Ghost looks unchanged (no new
-       backgrounds; hover fills are T32's polish). The handle's
-       `touch-action: none` (base rule above) is what keeps a touch drag
-       a drag — T28's "touch polish" note from T19, delivered here. */
+  /* -- Mobile / non-hover (≤640px; the breakpoint literal's documentation
+       home is tokens.css): the row actions STOP hiding (a touch row has no
+       hover to reveal them) and every small control gets its OWN ≥44px hit
+       floor (2.75rem box) — T28's walkthrough guarantee, delivered with
+       T32's treatments. The handle's `touch-action: none` (base rule) is
+       what keeps a touch drag a drag. */
+  @media (max-width: 640px), (hover: none) {
+    .row-actions {
+      opacity: 1;
+    }
+
+    .row {
+      padding-inline: var(--space-md);
+    }
+
     .handle,
-    .row-actions button {
-      min-height: 44px;
-      padding: var(--space-sm) var(--space-md);
+    .row-action {
+      width: 2.75rem;
+      height: 2.75rem;
     }
   }
 </style>

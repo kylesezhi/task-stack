@@ -1,11 +1,16 @@
 <script lang="ts">
   /**
-   * StacksDrawer mechanics (T20; sources: TASKS.md T20, DESIGN.md §5.4,
-   * DECISIONS.md §4/§6) — the sheet over the desk: every stack (server truth
-   * = position order) as a clickable row that switches the active stack,
-   * a per-row kebab (Rename, Delete), a confirm modal over the sheet for
-   * Delete, and the "+ New stack" footer create form. No drag-reorder UI
-   * here — PATCH /position stays a server-only API for v1.
+   * StacksDrawer (T20 mechanics + T32 sheet polish; sources: TASKS.md
+   * T20/T32, DESIGN.md §5.4, DECISIONS.md §4/§6) — the paper sheet sliding
+   * in from the LEFT over the desk (lib/sheet-motion's x-axis slide; reduced
+   * motion → fade): every stack (server truth = position order) as a
+   * clickable paper-slip row that switches the active stack, a per-row kebab
+   * (Rename, Delete) over a floating paper-card menu, a confirm modal over
+   * the sheet for Delete, and the "+ New stack" footer create form. The
+   * T32 layer (web/src/sheets.css) supplies the shared scrim + sheet
+   * language; this file adds the drawer's own §5.4 details (the tiny
+   * 3-layer sticky-note pictogram, the folded-corner active marker). No
+   * drag-reorder UI here — PATCH /position stays a server-only API for v1.
    *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the
@@ -47,15 +52,12 @@
    * (cleared at each action start, most recent wins — ListView's
    * convention); the delete failure line lives INSIDE the confirm modal so
    * the modal stays open for a retry. Quiet register (§6): no exclamations.
-   *
-   * Deliberately omitted (note, not bug): the §5.4 pictogram glyph,
-   * folded-corner active marker visual, hover-reveal, and animations —
-   * T32/T33 own them. This is mechanics with durable text ("— active") and
-   * minimal CSS; Phase 3 restyles.
    */
+  import { fade } from "svelte/transition";
   import { STACK_NAME_MAX_LENGTH } from "@task-stack/shared";
   import { snapshot, createStack, updateStack, deleteStack, setActiveStack } from "../lib/store";
   import { closeOverlay } from "../lib/view";
+  import { sheetIn, sheetOut } from "../lib/sheet-motion";
 
   const stacks = $derived($snapshot?.stacks ?? []);
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
@@ -286,73 +288,107 @@
 
 <svelte:window onclick={onWindowClick} />
 
-<section class="overlay">
-  <header>
-    <h2>Stacks</h2>
-    <button type="button" onclick={closeOverlay}>Close</button>
-  </header>
-  <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
-       the document's only <main>; sheets are dialogs, not mains. Full focus
-       management (inert background, aria-modal) is deferred to T33. -->
-  <div class="body">
-    <ul class="rows">
-      {#each stacks as stack (stack.id)}
-        {@const count = pendingCount(stack.id)}
-        {@const isActive = stack.id === activeStackId}
-        <li class="row">
-          {#if editingId === stack.id}
-            <form class="edit" onsubmit={onRenameSubmit}>
-              <label class="visually-hidden" for="rename-stack-name">Rename stack</label>
-              <input
-                id="rename-stack-name"
-                type="text"
-                bind:value={editDraft}
-                maxlength={STACK_NAME_MAX_LENGTH}
-                autocomplete="off"
-                onkeydown={onRenameKeydown}
-                use:focusOnMount
-              />
-              <button type="submit" disabled={!canSave}>Save</button>
-              <button type="button" onclick={cancelRename}>Cancel</button>
-            </form>
-          {:else}
-            <button
-              type="button"
-              class="stack-button"
-              onclick={() => onSwitch(stack.id)}
-              disabled={switchingId !== null}
-            >
-              <span class="name">{stack.name}</span> ({count})
-              {#if isActive}<span class="active">— active</span>{/if}
-            </button>
-            <button
-              type="button"
-              class="kebab"
-              aria-label="Actions for {stack.name}"
-              onclick={(event) => toggleMenu(event, stack.id)}
-            >
-              ⋮
-            </button>
-            {#if openMenuId === stack.id}
-              <div class="menu">
-                <button type="button" onclick={() => startRename(stack.id, stack.name)}>
-                  Rename
-                </button>
-                <button type="button" onclick={() => startDelete(stack.id)}>Delete</button>
-              </div>
+<!-- The scrim fades in only (`in:fade`, a plain 160ms backdrop veil) — an
+     intro-only transition's out() is a no-op, so the overlay is never
+     marked inert; the still-mounted scrim keeps blocking desk input until
+     the sheet's outro finishes and the block is removed, while the sheet
+     subtree itself is inert during its slide-out. The SHEET slides in from
+     the left (lib/sheet-motion's x-axis; reduced motion → fade). -->
+<div class="overlay overlay--drawer" in:fade={{ duration: 160 }}>
+  <section class="sheet sheet--drawer" in:sheetIn={{ x: -48 }} out:sheetOut={{ x: -32 }}>
+    <header class="sheet-header">
+      <h2 class="sheet-heading">Stacks</h2>
+      <span class="sheet-count">{stacks.length === 1 ? "1 stack" : `${stacks.length} stacks`}</span>
+      <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
+    </header>
+    <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
+         the document's only <main>; sheets are dialogs, not mains. Full focus
+         management (inert background, aria-modal) is deferred to T33. -->
+    <div class="sheet-body">
+      <ul class="rows">
+        {#each stacks as stack (stack.id)}
+          {@const count = pendingCount(stack.id)}
+          {@const isActive = stack.id === activeStackId}
+          <li class="row" class:active-row={isActive}>
+            {#if editingId === stack.id}
+              <form class="edit" onsubmit={onRenameSubmit}>
+                <label class="visually-hidden" for="rename-stack-name">Rename stack</label>
+                <input
+                  id="rename-stack-name"
+                  type="text"
+                  bind:value={editDraft}
+                  maxlength={STACK_NAME_MAX_LENGTH}
+                  autocomplete="off"
+                  onkeydown={onRenameKeydown}
+                  use:focusOnMount
+                />
+                <button type="submit" class="save" disabled={!canSave}>Save</button>
+                <button type="button" class="cancel" onclick={cancelRename}>Cancel</button>
+              </form>
+            {:else}
+              <!-- The §5.4 pictogram: a tiny sticky-note stack — three
+                   tilted rounded paper layers, pure CSS, tokens only
+                   (aria-hidden: decoration, never announced). -->
+              <span class="pictogram" aria-hidden="true">
+                <span class="layer back"></span>
+                <span class="layer mid"></span>
+                <span class="layer front"></span>
+              </span>
+              <!-- The row's ONE main button: switch + identity (name, count,
+                   marker). Text format "name (N)" and "— active" is durable —
+                   the e2e asserts both. -->
+              <button
+                type="button"
+                class="stack-button"
+                onclick={() => onSwitch(stack.id)}
+                disabled={switchingId !== null}
+              >
+                <span class="name">{stack.name}</span> ({count})
+                {#if isActive}<span class="active">— active</span>{/if}
+              </button>
+              <button
+                type="button"
+                class="kebab"
+                aria-label="Actions for {stack.name}"
+                onclick={(event) => toggleMenu(event, stack.id)}
+              >
+                ⋮
+              </button>
+              {#if openMenuId === stack.id}
+                <!-- Floating paper card, anchored to the row. -->
+                <div class="menu">
+                  <button
+                    type="button"
+                    class="menu-item"
+                    onclick={() => startRename(stack.id, stack.name)}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    class="menu-item delete"
+                    onclick={() => startDelete(stack.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              {/if}
             {/if}
-          {/if}
-        </li>
-      {/each}
-    </ul>
+          </li>
+        {/each}
+      </ul>
 
-    {#if actionError !== null}
-      <p class="error" role="alert">{actionError}</p>
-    {/if}
+      {#if actionError !== null}
+        <p class="error" role="alert">{actionError}</p>
+      {/if}
+    </div>
 
     <!-- Footer create form (§5.4). Same trim the server applies — the
          enabled state mirrors the server's min-1 rule, so a broken submit
-         can only come from a length/type violation, never whitespace. -->
+         can only come from a length/type violation, never whitespace.
+         A direct child of the sheet, after the flex:1 body: with little
+         content it sits at the bottom; with many stacks the body grows and
+         the overlay scrolls. -->
     <form class="create" onsubmit={onCreateSubmit}>
       <label class="visually-hidden" for="drawer-stack-name">Stack name</label>
       <input
@@ -363,28 +399,40 @@
         placeholder="Name this stack"
         autocomplete="off"
       />
-      <button type="submit" disabled={!canCreate}>+ New stack</button>
+      <button type="submit" class="create-button" disabled={!canCreate}>+ New stack</button>
     </form>
-  </div>
+  </section>
 
-  <!-- Confirm modal OVER the sheet: fixed backdrop above the overlay's
-       z-index 10 and below App.svelte's connection strip's 20. Its
-       markup-wise placement INSIDE the <section> no longer carries any
-       behavior: while a menu item is being clicked its focused button
-       unmounts and focus resets to <body>, so a later Esc targets body and
-       never passes through the section at all — the WINDOW-CAPTURE keydown
-       listener ("Esc layering", in the script) consumes it regardless of
-       target. Minimal semantics — role="dialog" is enough; the focus trap
-       is T33's. -->
+  <!-- Confirm modal OVER the sheet: fixed backdrop (the same warm ink scrim
+       the sheets sit on) above the overlay's z-index 10 and below
+       App.svelte's connection strip's 20. Its markup-wise placement inside
+       the overlay div no longer carries any behavior: while a menu item is
+       being clicked its focused button unmounts and focus resets to <body>,
+       so a later Esc targets body and never passes through the sheet at all
+       — the WINDOW-CAPTURE keydown listener ("Esc layering", in the script)
+       consumes it regardless of target. Minimal semantics — role="dialog"
+       is enough; the focus trap is T33's. -->
   {#if pendingDelete !== null}
     <div class="backdrop">
       <div class="modal" role="dialog">
         <p class="modal-copy">{deleteCopy}</p>
         <div class="modal-actions">
-          <button type="button" onclick={cancelDeleteConfirm} disabled={deletingId !== null}>
+          <button
+            type="button"
+            class="cancel"
+            onclick={cancelDeleteConfirm}
+            disabled={deletingId !== null}
+          >
             Cancel
           </button>
-          <button type="button" onclick={onDeleteConfirm} disabled={deletingId !== null}>
+          <!-- Delete is the accent stamp: the one loud color earns its
+               keep here — this button destroys notes. -->
+          <button
+            type="button"
+            class="delete"
+            onclick={onDeleteConfirm}
+            disabled={deletingId !== null}
+          >
             Delete
           </button>
         </div>
@@ -394,39 +442,19 @@
       </div>
     </div>
   {/if}
-</section>
+</div>
 
 <style>
-  section {
+  /* The body grows to push the footer down (flex:1 comes from the shared
+     .sheet-body rule); this adds its internal stack. */
+  .sheet-body {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-md);
   }
 
-  header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 1.1rem;
-  }
-
-  .body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  /* Minimal readable rows — the paper look and the pictogram glyph are T32. */
   .rows {
     width: 100%;
-    max-width: 28rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -435,14 +463,80 @@
     gap: 0.25rem;
   }
 
-  /* position: relative anchors each row's absolutely-positioned menu. */
+  /* A stack row is a paper slip: transparent until touched, then it
+     surfaces as white paper on a hairline edge (§5.4's highlighted rows).
+     position: relative anchors each row's absolutely-positioned menu and
+     the active row's folded corner. */
   .row {
     position: relative;
+    min-height: 2.75rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid var(--paper-edge);
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-note);
+    transition:
+      background-color 120ms var(--ease-lift),
+      border-color 120ms var(--ease-lift),
+      box-shadow 120ms var(--ease-lift);
+  }
+
+  .row:hover,
+  .row:focus-within {
+    background: var(--paper);
+    border-color: var(--paper-edge);
+  }
+
+  /* The ACTIVE stack's slip stays surfaced even without hover, with the
+     shallowest buried-note shadow lifting it a hair off the drawer. */
+  .row.active-row {
+    background: var(--paper);
+    border-color: var(--paper-edge);
+    box-shadow: var(--shadow-note-edge-near);
+  }
+
+  /* The §5.4 folded-corner marker on the active row: a small dog-ear
+     triangle in the top-right corner, gold (the quiet secondary — the
+     vermilion stays reserved for actions). Pure CSS, tokens only. */
+  .row.active-row::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-top: 0.5rem solid var(--gold-soft);
+    border-left: 0.5rem solid transparent;
+  }
+
+  /* The §5.4 pictogram: a tiny sticky-note stack — three tilted rounded
+     layers (shadow, gold-soft, gold-dim), pure CSS, aria-hidden. */
+  .pictogram {
+    position: relative;
+    flex: none;
+    width: 1.1rem;
+    height: 1.35rem;
+  }
+
+  .pictogram .layer {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-note);
+  }
+
+  .pictogram .back {
+    background: var(--paper-shade);
+    transform: rotate(5deg) translate(0.08rem, -0.06rem);
+  }
+
+  .pictogram .mid {
+    background: var(--gold-soft);
+    transform: rotate(-3deg) translate(-0.06rem, 0.08rem);
+  }
+
+  .pictogram .front {
+    background: var(--gold-dim);
+    transform: rotate(1deg);
   }
 
   /* The row's ONE main button: switch + identity (name, count, marker). */
@@ -452,8 +546,17 @@
     display: flex;
     align-items: baseline;
     gap: 0.25rem;
+    background: none;
+    border: none;
+    padding: 0;
     text-align: left;
     cursor: pointer;
+    color: var(--ink-body);
+    font-size: var(--text-body-md);
+  }
+
+  .stack-button:disabled {
+    cursor: default;
   }
 
   .name {
@@ -466,19 +569,36 @@
   .active {
     color: var(--ink-muted);
     font-size: 0.9rem;
-    /* The folded-corner visual is T32's; this span never shrinks away. */
+    /* The visible "— active" text stays exactly as written (e2e asserts
+       it); the folded-corner visual is the ::after above. */
     white-space: nowrap;
   }
 
   .kebab {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
     background: none;
     border: none;
-    color: var(--ink-muted);
+    border-radius: var(--radius-note);
+    color: var(--ink-quiet);
     cursor: pointer;
-    padding: 0 0.25rem;
+    padding: 0;
+    transition: color 120ms var(--ease-lift);
   }
 
-  /* Small block within the row (anchored to it), above the row contents. */
+  /* Always visible but quiet; hover/focus bring it to full ink. */
+  .kebab:hover,
+  .row:focus-within .kebab {
+    color: var(--ink-body);
+    background: var(--paper-shade);
+  }
+
+  /* Floating paper card (anchored to the row, above the row contents):
+     white paper, hairline edge, the sheet shadow — §5.4's menu without a
+     browser-native frame. */
   .menu {
     position: absolute;
     right: 0.25rem;
@@ -488,22 +608,45 @@
     flex-direction: column;
     background: var(--paper);
     border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-sheet);
+    padding: var(--space-xs);
     min-width: 6rem;
   }
 
-  .menu button {
+  .menu-item {
     background: none;
     border: none;
     text-align: left;
-    padding: 0.35rem 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-note);
     cursor: pointer;
+    color: var(--ink-body);
+    font-size: var(--text-body-md);
   }
 
+  .menu-item:hover {
+    background: var(--paper-shade);
+  }
+
+  /* Delete leans accent — the destructive item reads as such before the
+     confirm modal ever opens; its hover is the quiet accent-soft tint. */
+  .menu-item.delete {
+    color: var(--accent);
+  }
+
+  .menu-item.delete:hover {
+    background: var(--accent-soft);
+  }
+
+  /* -- Rename inline edit: shared paper slip input + Save chip + ghost
+     Cancel (the ListView treatment, same mechanics). */
   .edit {
     flex: 1;
     min-width: 0;
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: var(--space-sm);
   }
 
   /* The rename input takes the space beside Save/Cancel (T28 §9):
@@ -514,19 +657,73 @@
     min-width: 0;
   }
 
-  /* The footer create form fills the sheet's gutters and caps where the
-     rows cap (28rem — same measure as .rows); its input shrinks beside
-     the button instead of stretching the row (T28 §9). */
+  .edit .save {
+    flex: none;
+    background: var(--paper-shade);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-note);
+    color: var(--accent);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-md);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .edit .save:disabled {
+    color: var(--ink-quiet);
+    cursor: default;
+  }
+
+  .edit .cancel {
+    flex: none;
+    background: none;
+    border: none;
+    border-radius: var(--radius-note);
+    color: var(--ink-muted);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-md);
+    cursor: pointer;
+  }
+
+  .edit .cancel:hover {
+    background: var(--paper-shade);
+    color: var(--ink-body);
+  }
+
+  /* -- Footer create form: a paper slip pinned to the bottom of the sheet
+     (it follows the flex:1 body), warm paper with a top hairline. Its
+     input shrinks beside the button instead of stretching the row
+     (T28 §9); the button is the paper-shade chip with accent ink. */
   .create {
+    flex: none;
     display: flex;
-    gap: 0.5rem;
-    width: 100%;
-    max-width: 28rem;
+    align-items: center;
+    gap: var(--space-sm);
+    background: var(--paper-warm);
+    border-top: 1px solid var(--paper-edge);
+    padding: var(--space-md) var(--space-lg);
   }
 
   .create input {
     flex: 1;
     min-width: 0;
+  }
+
+  .create-button {
+    flex: none;
+    background: var(--paper-shade);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-note);
+    color: var(--accent);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-label-md);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .create-button:disabled {
+    color: var(--ink-quiet);
+    cursor: default;
   }
 
   .error {
@@ -539,13 +736,12 @@
     font-size: 0.9rem;
   }
 
-  /* Confirm modal backdrop over the sheet: the paper surface at 90% via
-     color-mix (evergreen-browsers only, DECISIONS.md §11) — same hazy-veil
-     look as the old rgba literal, sourced from tokens.css. The backdrop is
-     position:fixed, so it does NOT inherit the .overlay's T28 padding —
-     it carries the same gutter itself, which is what `min(24rem, 100%)`
-     on .modal below resolves against (T28 §9: the modal must fit at
-     390px, long stack names included). */
+  /* Confirm modal backdrop over the sheet: the SAME warm ink scrim the
+     sheets sit on (color-mix over --ink — evergreen-browsers only,
+     DECISIONS.md §11), no blur. The backdrop is position:fixed, so it does
+     NOT inherit the overlay's padding — it carries the same gutter itself,
+     which is what `min(24rem, 100%)` on .modal below resolves against
+     (T28 §9: the modal must fit at 390px, long stack names included). */
   .backdrop {
     position: fixed;
     inset: 0;
@@ -553,14 +749,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--paper) 90%, transparent);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
     padding-inline: var(--gutter);
   }
 
+  /* The modal: a paper card with the sheet shadow and the sheet radius,
+     tilted a whisper (-0.3deg — hand-placed, §2, not a grid). */
   .modal {
     background: var(--paper);
     border: 1px solid var(--paper-edge);
-    padding: 1rem;
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-sheet);
+    padding: var(--space-lg);
+    transform: rotate(-0.3deg);
     /* Fits at 390px: min() caps at the desktop 24rem and falls back to
        the padded backdrop's width on narrow viewports (T28 §9 — the
        confirm copy names the stack, so the box must never overflow). */
@@ -582,7 +783,45 @@
   .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--space-sm);
+  }
+
+  /* Cancel: ghost paper button. Delete: the accent stamp. */
+  .modal-actions .cancel {
+    background: none;
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-note);
+    color: var(--ink-body);
+    padding: var(--space-xs) var(--space-md);
+    cursor: pointer;
+  }
+
+  .modal-actions .cancel:hover {
+    background: var(--paper-shade);
+  }
+
+  .modal-actions .cancel:disabled {
+    cursor: default;
+    color: var(--ink-quiet);
+  }
+
+  .modal-actions .delete {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-note);
+    color: var(--on-accent);
+    padding: var(--space-xs) var(--space-md);
+    cursor: pointer;
+    box-shadow: var(--shadow-btn-accent);
+  }
+
+  .modal-actions .delete:hover {
+    background: var(--accent-hover);
+  }
+
+  .modal-actions .delete:disabled {
+    cursor: default;
+    box-shadow: var(--shadow-btn-accent-active);
   }
 
   .visually-hidden {
@@ -594,11 +833,9 @@
     white-space: nowrap;
   }
 
-  /* -- Mobile (≤640px; TASKS.md T28 §9): thumb-sized kebab and menu
-     controls. The breakpoint literal is documented once in tokens.css;
-     every repetition cites it. Visually quiet: the ghost looks stay (the
-     row's own border box and the menu's paper surface are the existing
-     styles; hover fills are T32's polish). */
+  /* -- Mobile (≤640px; the breakpoint literal is documented once in
+       tokens.css; every repetition cites it): thumb-sized kebab and menu
+       controls (the ≥44px hit floor is each control's own box). */
   @media (max-width: 640px) {
     /* The confirm modal's backdrop is position:fixed, so it does NOT
        inherit the sheet's responsive padding — carry the mobile gutter
@@ -608,15 +845,14 @@
       padding-inline: var(--gutter-mobile);
     }
 
-    /* Kebab + menu items: each control's OWN ≥44px hit floor (min-height)
-       plus comfortable padding. Deliberate boundary, same as the list
-       sheet's: labeled sheet buttons (Close/Save/Cancel/+ New stack) keep
-       their current comfortable padded sizes — T28's explicit size
-       mandate is the thumb-sized Done only (TASKS.md T28); everything
-       else must merely be REACHABLE (proven by the walkthrough), and the
-       sheets' real button treatment is T32/T33's. */
-    .kebab,
-    .menu button {
+    .kebab {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+
+    /* Menu items keep their natural width (text-sized); the 44px floor is
+       the min-height, padded comfortable for thumbs. */
+    .menu-item {
       min-height: 44px;
       padding: var(--space-sm) var(--space-md);
     }

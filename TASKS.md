@@ -337,5 +337,5 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 ### Out of scope for v1 (do not build)
 
 PWA/offline · auth/multi-user · dark mode · undo · tags/dates/reminders/recurring
-· search · sub-items/nesting · set-aside shelf · sharing · animation libraries
+· search · sub-items/nesting · set-aside shelf · sharing · animation libraries · sounds effects
 · CI pipeline

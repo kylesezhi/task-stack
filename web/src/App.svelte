@@ -11,9 +11,20 @@
    *   desk — §5.3/§5.4 — and StackView's local state survives underneath).
    * Esc closes whatever overlay is open. Visual design starts with Phase 3
    * (T23+); this is mechanics with the least CSS that shows the layering.
+   *
+   * T33 slice 1 lands the a11y foundations: ONE global polite live region
+   * (lib/announce.ts) rendered here — OUTSIDE the inert desk wrapper below
+   * so it still announces while a sheet is open — narrating top-note
+   * changes via lib/top-announcement.ts. The desk itself goes `inert`
+   * whenever an overlay is on top — but stays MOUNTED (§5.3/§5.4): a
+   * conditional would remount StackView and reset its trackers and local
+   * state; `inert` takes the desk out of Tab order and AT while a sheet
+   * is up.
    */
   import { snapshot, status } from "./lib/store";
   import { view, closeOverlay } from "./lib/view";
+  import { announce, announcement } from "./lib/announce";
+  import { topNoteAnnouncement } from "./lib/top-announcement";
   import ArchiveView from "./views/ArchiveView.svelte";
   import FirstRunView from "./views/FirstRunView.svelte";
   import ListView from "./views/ListView.svelte";
@@ -25,13 +36,57 @@
     // Input-aware Esc for StackView's quick-add/edit inputs landed with T18:
     // those inputs handle and consume Escape themselves (clear draft /
     // cancel edit) and stopPropagation, so the window handler below only
-    // sees Esc pressed outside an editing input. T33 owns the remaining
-    // keyboard polish: `/` focuses the input, aria-live announcements, and
-    // the full keyboard-only/axe pass.
+    // sees Esc pressed outside an editing input. T33's remaining keyboard
+    // polish has landed too: `/` focuses quick-add, one global live region
+    // narrates top-note changes, and the zz-a11y keyboard-only/axe e2e
+    // exercises the whole desk end to end.
     // The svelte:window keydown → closeOverlay() binding itself is exercised
     // by T22's Playwright e2e (approved plan); T16 verifies the machine
     // semantics via unit tests.
   }
+
+  // -- aria-live: announce top-note changes (T33) ---------------------------
+  // Same filter-then-sort discipline as StackView (never sort the snapshot
+  // in place): position-ascending copy of the active stack's notes, so
+  // index 0 is what sits on top.
+  const activeStackId = $derived($snapshot?.activeStackId ?? null);
+  const activeStack = $derived(
+    $snapshot?.stacks.find((stack) => stack.id === activeStackId) ?? null,
+  );
+  const activeNotes = $derived(
+    ($snapshot?.notes ?? [])
+      .filter((note) => note.stackId === activeStackId)
+      .sort((a, b) => a.position - b.position),
+  );
+
+  // Plain (non-reactive) bookkeeping — deliberately NOT $state: they are
+  // write-only side notes of this effect, never read by the template, so
+  // tracking them would only cause useless re-runs.
+  let announcedFirst = false;
+  let announcedKey: string | null = null;
+
+  $effect(() => {
+    const stack = activeStack;
+    const notes = activeNotes;
+    if (stack === null) return; // first run: no desk to narrate yet
+    // The key is stack + top id, NOT count, name, or text: a stack rename
+    // or an edit of the top note (same id) changes none of those and must
+    // stay silent. A buried-row toss changes only the COUNT, not the top
+    // note, so it must stay silent too (the count tail of the key is gone —
+    // it used to re-narrate the same top note); every real top change
+    // (push / pop / toss-top / reorder / switch) changes the top id and
+    // speaks. The very first observation is skipped: landing on the desk
+    // after a reload is not news worth narrating.
+    const key = `${stack.id}:${notes[0]?.id ?? ""}`;
+    if (!announcedFirst) {
+      announcedFirst = true;
+      announcedKey = key;
+      return;
+    }
+    if (key === announcedKey) return;
+    announcedKey = key;
+    announce(topNoteAnnouncement(stack.name, notes));
+  });
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -40,12 +95,19 @@
   {#if $status !== "online"}
     <main class="connecting"><p class="quiet">Connecting…</p></main>
   {:else}
-    <main class="connecting"><p class="quiet">Waiting for the server snapshot…</p></main>
+    <main class="connecting"><p class="quiet">Waking the desk…</p></main>
   {/if}
 {:else if $view === "firstRun"}
   <FirstRunView />
 {:else}
-  <StackView />
+  <!-- T33: inert (not an {#if}) while an overlay is open — the attribute
+       takes the desk out of Tab order and AT without UNMOUNTING StackView,
+       whose trackers and local state must survive underneath (§5.3/§5.4).
+       The live region below and the connection strip stay outside this
+       wrapper so they still announce/report while a sheet is up. -->
+  <div inert={$view !== "stack"}>
+    <StackView />
+  </div>
   {#if $view === "list"}
     <ListView />
   {:else if $view === "drawer"}
@@ -55,6 +117,13 @@
   {/if}
 {/if}
 
+<!-- The one global polite live region (T33): visually hidden, outside the
+     inert desk wrapper, aria-atomic so each announcement is spoken whole.
+     Components call announce(); they never render their own regions. -->
+<div class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+  {$announcement}
+</div>
+
 {#if $snapshot !== null && $status !== "online"}
   <!-- Online-only app: be honest about disconnects wherever the user is,
        including inside an open overlay (fixed strip above the sheets).
@@ -62,8 +131,8 @@
        Close/top-nav controls beneath stay usable with mouse and touch —
        bottom placement would collide with "See all N" and T28's pinned mobile
        input, and reserving conditional top space would couple body layout to
-       a transient state. Phase 3 (T33) owns the real chrome/disconnect
-       treatment; the T16 requirement is honesty without disabling controls. -->
+       a transient state. The treatment is T16's, as shipped (honesty without
+       disabling controls), and the T33 a11y pass left this strip unchanged. -->
   <p class="connection">
     {$status === "connecting"
       ? "Reaching for the server…"
@@ -87,6 +156,18 @@
        secondary-ink floor (#5a413b, darker than the old #555, so the floor
        holds a fortiori). */
     color: var(--ink-muted);
+  }
+
+  /* The T33 live region's only styling: off-screen for sighted users, fully
+     readable by AT (same shape as StackView's label class — clip, not
+     opacity, so screen readers still get the text). */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .connection {

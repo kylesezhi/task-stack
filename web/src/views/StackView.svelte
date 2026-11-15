@@ -23,6 +23,13 @@
    * occupying exactly the pile's footprint behind the quiet line — total
    * stillness (DESIGN.md §7), no animation or transition of any kind.
    *
+   * T33 slice 1 lands the desk's a11y foundations: the desk becomes the
+   * page's single <main> landmark (the old inner stage demotes to a div),
+   * the chrome title becomes the page's h1 (visually unchanged), "/" —
+   * with input-aware guards — focuses quick-add, and the §3 hint
+   * advertises that shortcut + Enter now that both are true (§6 honesty:
+   * advertising them earlier would have been a lie).
+   *
    * Mutations go through the store helpers (T15), each resolving
    * `{ok:true} | {ok:false; error}` — never rejecting. On success the fresher
    * server snapshot is applied before the promise resolves, so there is
@@ -34,8 +41,9 @@
    * (quick-add: clear text if any; edit: cancel) via stopPropagation, so
    * App.svelte's svelte:window Esc (closes overlays) never double-fires.
    */
+  import { tick } from "svelte";
   import { snapshot, completeNote, editNote, pushNote, tossNote } from "../lib/store";
-  import { openView } from "../lib/view";
+  import { openView, view } from "../lib/view";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
   import type { Note } from "@task-stack/shared";
   import NoteCard from "../components/NoteCard.svelte";
@@ -212,6 +220,30 @@
     // Already empty → let it bubble (on the desk that's a no-op anyway).
   }
 
+  // -- "/" focuses quick-add (T33 keyboard-only pass) -----------------------
+  let quickAddInput = $state<HTMLInputElement | null>(null);
+
+  /** True for every "the user is typing here" target — never hijack keys
+   * pressed INSIDE an editable control (INPUT/TEXTAREA/SELECT or anything
+   * contenteditable). */
+  function isEditable(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    const tag = target.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
+  function onSlashKeydown(event: KeyboardEvent): void {
+    // Overlays own their own keys; the shortcut is desk-level only.
+    if ($view !== "stack") return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key !== "/") return;
+    if (isEditable(event.target)) return;
+    // preventDefault: Firefox would otherwise open quick-find on "/".
+    event.preventDefault();
+    quickAddInput?.focus();
+  }
+
   // -- Action row: Done / Toss ---------------------------------------------
   let acting = $state<"done" | "toss" | null>(null);
   let actionError = $state<string | null>(null);
@@ -220,18 +252,43 @@
     if (topNote === null || acting !== null) return;
     acting = "done";
     actionError = null;
+    // Capture before the flight: the focused Done button unmounts only when
+    // the LAST note leaves (the action row renders only with a top note).
+    const focusWasInActions =
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.closest(".actions") !== null;
     const result = await completeNote(topNote.id);
     if (!result.ok) actionError = result.error;
     acting = null;
+    // Only the last-note case unmounts the focused action button — with
+    // notes remaining, focus stays on Done/Toss. If focus fell to <body>
+    // (and there is no top note to narrate over), re-home it on quick-add.
+    if (result.ok) {
+      await tick();
+      if (focusWasInActions && document.activeElement === document.body && topNote === null) {
+        quickAddInput?.focus();
+      }
+    }
   }
 
   async function onToss(): Promise<void> {
     if (topNote === null || acting !== null) return;
     acting = "toss";
     actionError = null;
+    // Same capture as onDone above: the focused button unmounts with the
+    // last note only.
+    const focusWasInActions =
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.closest(".actions") !== null;
     const result = await tossNote(topNote.id);
     if (!result.ok) actionError = result.error;
     acting = null;
+    if (result.ok) {
+      await tick();
+      if (focusWasInActions && document.activeElement === document.body && topNote === null) {
+        quickAddInput?.focus();
+      }
+    }
   }
 
   // -- Inline edit -----------------------------------------------------------
@@ -241,6 +298,10 @@
   let editError = $state<string | null>(null);
   const editTrimmed = $derived(editDraft.trim());
   const canSave = $derived(editTrimmed.length > 0 && !saving);
+  // The action row's Edit button — the focus-return target when the edit
+  // form closes with focus still inside it (the form is about to unmount
+  // and would otherwise drop focus to <body>).
+  let editButton = $state<HTMLButtonElement | null>(null);
 
   function startEdit(): void {
     if (topNote === null || editingId !== null) return;
@@ -259,11 +320,27 @@
     editError = null;
   }
 
-  function cancelEdit(): void {
+  function cancelEdit(restoreFocus = true): void {
+    // Restore focus to the Edit button only when the edit ended with focus
+    // INSIDE the form (Cancel, save, or the input's Esc): the form is about
+    // to unmount and would otherwise drop focus to <body>. A remote
+    // auto-cancel (restoreFocus=false) must never STEAL focus — check where
+    // focus actually sits before touching it.
+    const active = document.activeElement;
+    const focusWasInForm =
+      restoreFocus &&
+      editingId !== null &&
+      active instanceof HTMLElement &&
+      active.closest("form.edit") !== null;
     editingId = null;
     editDraft = "";
     saving = false;
     editError = null;
+    if (focusWasInForm) {
+      void tick().then(() => {
+        if (editButton?.isConnected) editButton.focus();
+      });
+    }
   }
 
   async function onEditSubmit(event: SubmitEvent): Promise<void> {
@@ -310,23 +387,28 @@
   // edge the no-undo decision (DECISIONS.md §4/§5) already covers.
   $effect(() => {
     if (editingId !== null && editingId !== (topNote?.id ?? null)) {
-      cancelEdit();
+      cancelEdit(false);
     }
   });
 </script>
 
-<div class="desk">
+<svelte:window onkeydown={onSlashKeydown} />
+
+<!-- The desk is the page's single <main> landmark (T33; sheets are dialogs,
+     not mains — T16 rule), so ALL desk content lives inside it. -->
+<main class="desk">
   <header class="chrome">
     <button type="button" onclick={() => openView("drawer")}>Stacks</button>
-    <p class="title">
+    <h1 class="title">
       {activeStack?.name ?? "unknown"}
       <span class="count"> {noteCount} {noteCount === 1 ? "note" : "notes"} </span>
-    </p>
+    </h1>
     <button type="button" onclick={() => openView("archive")}>Archive</button>
   </header>
 
-  <!-- The document's only <main> (sheets are dialogs, not mains — T16 rule). -->
-  <main class="stage">
+  <!-- The stage demotes to a plain div (T33): the desk <main> above is now
+       the document's only main landmark, so nothing inside it competes. -->
+  <div class="stage">
     <!-- The T26 pile: the deck is position:relative and holds BOTH layers —
          the deepest-first peeking edges render FIRST (so shallower edges
          and the top card paint over them), then the card / edit-form /
@@ -402,7 +484,7 @@
               use:focusOnMount
             />
             <button type="submit" disabled={!canSave}>Save</button>
-            <button type="button" onclick={cancelEdit}>Cancel</button>
+            <button type="button" onclick={() => cancelEdit()}>Cancel</button>
             {#if editError !== null}
               <p class="error" role="alert">{editError}</p>
             {/if}
@@ -452,7 +534,7 @@
         {/key}
       {/if}
     </div>
-  </main>
+  </div>
 
   {#if topNote !== null}
     <!-- Done primary, Edit ghost, Toss quietest ghost (§5.1) — solid vs plain
@@ -480,6 +562,7 @@
       <button
         type="button"
         class="edit"
+        bind:this={editButton}
         onclick={startEdit}
         disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
@@ -508,8 +591,10 @@
   {/if}
 
   <!-- Always rendered: pushing onto an empty stack is the primary flow after
-       first run. No "/ to focus" hint yet — the shortcut is T33's wiring, and
-       advertising it now would be a lie (§6 honesty). -->
+       first run. The §3 hint is only true as of T33 (the "/" wiring just
+       landed) — advertising it earlier would have been a lie (§6 honesty).
+       The input carries aria-describedby → the hint, so AT users get the
+       same shortcut story without reading the visual line. -->
   <section class="quick-add">
     <form onsubmit={onQuickAddSubmit}>
       <label class="visually-hidden" for="quick-add">New note</label>
@@ -517,18 +602,21 @@
         id="quick-add"
         type="text"
         bind:value={draft}
+        bind:this={quickAddInput}
         maxlength={NOTE_TEXT_MAX_LENGTH}
         autocomplete="off"
         placeholder="Write it down, stick it on top."
+        aria-describedby="quick-add-hint"
         onkeydown={onQuickAddKeydown}
       />
       <button type="submit" disabled={!canPush}>Push</button>
     </form>
+    <p class="hint" id="quick-add-hint">/ to focus · Enter to push</p>
     {#if pushError !== null}
       <p class="error" role="alert">{pushError}</p>
     {/if}
   </section>
-</div>
+</main>
 
 <style>
   /* T28 (DESIGN.md §8, TASKS.md T28): the desk is the responsive shell —
@@ -567,7 +655,12 @@
      is the 80-char-name guard (shared/src/validation.ts
      STACK_NAME_MAX_LENGTH): a long unbroken name wraps instead of opening
      a horizontal scrollbar. e2e reads .title by text content only, so the
-     restructure is assertion-safe. */
+     restructure is assertion-safe.
+     T33: the element became the page's <h1> for STRUCTURE only — a real
+     semantic change, with the visual deliberately preserved: font-size,
+     weight, and line-height are pinned to what the old <p> inherited
+     (1rem/400 with the body's line-height) instead of the UA's oversized
+     bold h1 default (margin is already 0 above). */
   .title {
     display: flex;
     flex-direction: column;
@@ -575,13 +668,16 @@
     margin: 0;
     text-align: center;
     overflow-wrap: anywhere;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: inherit;
   }
 
   .count {
     color: var(--ink-quiet);
     font-size: 0.9rem;
-    /* span inside p: swallow the whitespace the {#text} interpolation adds */
-    /* (kept minimal; Phase 3 owns real chrome styling) */
+    /* span inside the h1: swallow the whitespace the {#text} interpolation
+     * adds (kept minimal; Phase 3 owns real chrome styling) */
     white-space: nowrap;
   }
 
@@ -785,13 +881,29 @@
      below its content, so a 280-char paste never stretches the row).
      On mobile the whole strip pins to the bottom (media block below). */
   .quick-add {
+    /* T33: column so the §3 hint sits UNDER the slip — the slip keeps its
+       own width (100% up to the 26rem cap) and the hint centers beneath
+       it; the gap is --space-xs, no new spacing value. */
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
     justify-content: center;
     /* env(safe-area-inset-bottom) is 0 wherever there is no inset (all
        desktops) → max() resolves to the token; on notched phones it
        lifts the slip above the home indicator. max(), not the raw env():
        the token floor keeps the desktop spacing identical. */
     padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
+  }
+
+  .hint {
+    /* T33 (§3): the visible keyboard hint under the slip — quiet ink at
+       the label size, centered, no margin (the section's gap owns the
+       rhythm). --ink-quiet, not muted: real copy keeps its AA floor. */
+    margin: 0;
+    text-align: center;
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
   }
 
   .quick-add form {
@@ -814,8 +926,8 @@
 
   /* The Push button, quiet per the mobile mockup: a paper-shade chip with
      the accent as INK only (the slip is the affordance, not the button —
-     §2 "quiet and few"). radius-note chips it into the slip. The UA focus
-     outline is deliberately untouched — T33 owns focus styling. */
+     §2 "quiet and few"). radius-note chips it into the slip. Focus styling
+     is the T33 global ring (app.css) — nothing local here. */
   .quick-add button {
     background: var(--paper-shade);
     color: var(--accent);

@@ -25,6 +25,7 @@
   import { closeOverlay } from "../lib/view";
   import { formatCompletedTime, groupCompletedByDay } from "../lib/archive";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
+  import { dialogFocus } from "../lib/dialog-focus";
 
   const doneCount = $derived($snapshot?.completed.length ?? 0);
   const groups = $derived(groupCompletedByDay($snapshot?.completed ?? []));
@@ -37,15 +38,30 @@
      subtree itself is inert during its slide-out. The SHEET slides
      (lib/sheet-motion; reduced motion → fade). -->
 <div class="overlay" in:fade={{ duration: 160 }}>
-  <section class="sheet" in:sheetIn={{ y: 20 }} out:sheetOut={{ y: 12 }}>
+  <!-- role="dialog" + aria-modal + use:dialogFocus (T33 slice 2): the sheet
+       IS the dialog — focus lands inside on open, Tab is trapped, and the
+       App-inerted desk stays out of Tab order and AT behind it. A div, not
+       a <section>: the section element's own landmark-ish semantics would
+       clash with (and svelte-check rejects) the interactive dialog role —
+       the class carries the sheet's look, not the tag. -->
+  <div
+    class="sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="archive-title"
+    use:dialogFocus
+    in:sheetIn={{ y: 20 }}
+    out:sheetOut={{ y: 12 }}
+  >
     <header class="sheet-header">
-      <h2 class="sheet-heading">Archive</h2>
+      <h2 class="sheet-heading" id="archive-title">Archive</h2>
       <span class="sheet-count">{doneCount} done</span>
       <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
-         the document's only <main>; sheets are dialogs, not mains. Full focus
-         management (inert background, aria-modal) is deferred to T33. -->
+         the document's only <main>; sheets are dialogs, not mains. Focus
+         management landed with T33 slice 2 (dialogFocus above; the desk is
+         inerted by App.svelte while this sheet is open). -->
     <div class="sheet-body">
       {#if groups.length === 0}
         <!-- DESIGN.md §5.6's archive empty copy, exact. -->
@@ -74,7 +90,7 @@
         {/each}
       {/if}
     </div>
-  </section>
+  </div>
 </div>
 
 <style>

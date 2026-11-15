@@ -266,7 +266,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** visual review of all three overlays against DESIGN.md.
   Depends: T19, T20, T21, T24
 
-- [ ] **T33 · Microcopy + accessibility pass** — M
+- [x] **T33 · Microcopy + accessibility pass** — M
   All copy in the quietly-playful register (DESIGN.md §6); focus order; aria-live
   announcement when the top note changes; keyboard-only operation (`/` focuses
   input, Enter pushes, Esc closes/clears); axe scan.

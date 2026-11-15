@@ -20,12 +20,16 @@
    * created stack appears — active — at the drawer end). The drawer stays
    * open after a switch; Close/Esc is the explicit exit.
    *
-   * -- Kebab menus ---------------------------------------------------------
+   * -- Kebab menus (T33 slice 2) -------------------------------------------
    * One openMenuId at a time (opening one closes another); the kebab's own
    * click stops propagation and a <svelte:window> click handler closes any
    * open menu on an outside click. Menu-item clicks bubbling to that
    * handler closing the menu is the desired behavior (the item handler has
-   * already acted).
+   * already acted). The kebab is a disclosure control (aria-expanded) and
+   * its element is remembered as menuTrigger when it toggles a menu: the
+   * menu's first item takes focus on open (use:focusFirst) and Esc-closing
+   * the menu puts focus back on the kebab — a menu is dismissal content,
+   * not a dialog, so there is no trap and no return-on-destroy.
    *
    * -- Esc layering (innermost first) --------------------------------------
    * The rename input consumes its own Esc on the INPUT itself (target phase
@@ -41,11 +45,13 @@
    * <body>, so a bubble-phase section handler would never even fire (see
    * the "Esc layering" block near the effects). With no modal/menu open
    * nothing is consumed and App.svelte's window Esc closes the sheet
-   * normally. One accepted order consequence: with a modal or kebab menu
+   * normally. The capture handler also owns the T33 slice-2 focus returns:
+   * Esc on the modal restores focus to the menuTrigger kebab (the modal's
+   * dialogFocus returnFocus), and Esc on the menu focuses the kebab
+   * directly. One accepted order consequence: with a modal or kebab menu
    * open, the capture listener consumes Esc for that topmost surface even
    * when focus sits in the rename input (topmost first: modal > menu >
-   * input; no data loss — a second Esc resolves the next surface out, and
-   * T33's focus-management pass revisits this order).
+   * input; no data loss — a second Esc resolves the next surface out).
    *
    * -- Errors --------------------------------------------------------------
    * ONE shared actionError line for create / switch / rename failures
@@ -54,10 +60,12 @@
    * the modal stays open for a retry. Quiet register (§6): no exclamations.
    */
   import { fade } from "svelte/transition";
+  import { tick } from "svelte";
   import { STACK_NAME_MAX_LENGTH } from "@task-stack/shared";
   import { snapshot, createStack, updateStack, deleteStack, setActiveStack } from "../lib/store";
   import { closeOverlay } from "../lib/view";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
+  import { dialogFocus, focusFirst } from "../lib/dialog-focus";
 
   const stacks = $derived($snapshot?.stacks ?? []);
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
@@ -85,8 +93,15 @@
 
   // -- Kebab menu (one open at a time) ---------------------------------------
   let openMenuId = $state<string | null>(null);
+  /** The kebab button that toggled the CURRENT menu — the focus return
+   * target when Esc closes the menu, when a rename started from it ends,
+   * and (via the modal's dialogFocus) when the delete confirm closes.
+   * Only one menu is ever open, so one slot is enough; stale values are
+   * harmless because every consumer checks isConnected first. */
+  let menuTrigger = $state<HTMLElement | null>(null);
 
   function toggleMenu(event: MouseEvent, stackId: string): void {
+    menuTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     openMenuId = openMenuId === stackId ? null : stackId;
     // Opening/closing a menu must NOT reach the window click handler as an
     // "outside click" for a different target.
@@ -113,9 +128,20 @@
   }
 
   function cancelRename(): void {
+    // Restore focus to the kebab when the rename ended with focus INSIDE the
+    // form (Cancel button, save, or the input's Esc): the form is about to
+    // unmount and would otherwise drop focus to <body>. A remote
+    // auto-cancel (the stack vanished via WS) must never STEAL focus —
+    // check where focus actually sits before touching it.
+    const active = document.activeElement;
+    const focusWasInForm =
+      editingId !== null && active instanceof HTMLElement && active.closest(".edit") !== null;
     editingId = null;
     editDraft = "";
     saving = false;
+    if (focusWasInForm && menuTrigger !== null && menuTrigger.isConnected) {
+      menuTrigger.focus();
+    }
   }
 
   async function onRenameSubmit(event: SubmitEvent): Promise<void> {
@@ -229,6 +255,21 @@
       // (server truth); if it was the last stack, the view machine flips to
       // firstRun and this sheet unmounts — no special code for either.
       cancelDeleteConfirm();
+      await tick();
+      // The modal's dialogFocus restored focus to the deleted stack's kebab
+      // — which just vanished from the snapshot — so focus fell to <body>.
+      // A keyboard user must not be stranded there: prefer the footer
+      // create input (the drawer's natural resting control; it is where
+      // first-run users land too) and fall back to the sheet's Close button.
+      // With the LAST stack deleted the whole drawer unmounts (the view
+      // machine flips to firstRun), so both queries find nothing and this
+      // no-ops — the First Run screen mounts its own focused input.
+      if (document.activeElement === document.body) {
+        const firstRunInput = document.querySelector<HTMLElement>("#stack-name");
+        (
+          firstRunInput ?? document.querySelector<HTMLElement>(".sheet--drawer .sheet-close")
+        )?.focus();
+      }
     } else {
       // The modal stays open with its error line for a retry.
       deleteError = result.error;
@@ -265,9 +306,13 @@
   // during a delete flight, so a mid-flight Esc consumes without
   // cancelling — it can neither cancel nor fall through to sheet-close),
   // then the open menu, else a no-op (the listener isn't even attached in
-  // that state). The effect re-runs when either id changes (never a stale
-  // closure) and Svelte tears the listener down exactly when neither
-  // surface is open (component unmount included).
+  // that state). Each close also returns focus (T33 slice 2): the modal's
+  // dialogFocus is created with returnFocus: menuTrigger, so cancelling it
+  // puts focus back on the kebab by itself; the MENU has no dialog action,
+  // so Esc-closing it focuses the kebab here. The effect re-runs when
+  // either id changes (never a stale closure) and Svelte tears the
+  // listener down exactly when neither surface is open (component unmount
+  // included).
   $effect(() => {
     if (confirmDeleteId === null && openMenuId === null) return;
     const onKeydownCapture = (event: KeyboardEvent): void => {
@@ -276,6 +321,9 @@
         if (deletingId === null) cancelDeleteConfirm();
       } else {
         openMenuId = null;
+        // Focus is in (or was last in) the menu being unmounted — put it
+        // back on the kebab that opened it, if that button still exists.
+        if (menuTrigger !== null && menuTrigger.isConnected) menuTrigger.focus();
       }
       // Consumed at window-capture: App.svelte's bubble-phase window handler
       // never sees this keypress — the sheet stays open.
@@ -295,15 +343,33 @@
      subtree itself is inert during its slide-out. The SHEET slides in from
      the left (lib/sheet-motion's x-axis; reduced motion → fade). -->
 <div class="overlay overlay--drawer" in:fade={{ duration: 160 }}>
-  <section class="sheet sheet--drawer" in:sheetIn={{ x: -48 }} out:sheetOut={{ x: -32 }}>
+  <!-- role="dialog" + aria-modal + use:dialogFocus (T33 slice 2): the drawer
+       IS the dialog — focus lands inside on open, Tab is trapped, the
+       App-inerted desk stays inert behind it — and it goes inert ITSELF
+       while the confirm modal is up, so the modal is the only interactive
+       surface. A div, not a <section>: the section element's own
+       landmark-ish semantics would clash with (and svelte-check rejects)
+       the interactive dialog role — the class carries the sheet's look,
+       not the tag. -->
+  <div
+    class="sheet sheet--drawer"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="drawer-title"
+    inert={pendingDelete !== null}
+    use:dialogFocus
+    in:sheetIn={{ x: -48 }}
+    out:sheetOut={{ x: -32 }}
+  >
     <header class="sheet-header">
-      <h2 class="sheet-heading">Stacks</h2>
+      <h2 class="sheet-heading" id="drawer-title">Stacks</h2>
       <span class="sheet-count">{stacks.length === 1 ? "1 stack" : `${stacks.length} stacks`}</span>
       <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
-         the document's only <main>; sheets are dialogs, not mains. Full focus
-         management (inert background, aria-modal) is deferred to T33. -->
+         the document's only <main>; sheets are dialogs, not mains. Focus
+         management landed with T33 slice 2 (dialogFocus above; the desk is
+         inerted by App.svelte while this sheet is open). -->
     <div class="sheet-body">
       <ul class="rows">
         {#each stacks as stack (stack.id)}
@@ -350,13 +416,17 @@
                 type="button"
                 class="kebab"
                 aria-label="Actions for {stack.name}"
+                aria-expanded={openMenuId === stack.id}
                 onclick={(event) => toggleMenu(event, stack.id)}
               >
                 ⋮
               </button>
               {#if openMenuId === stack.id}
-                <!-- Floating paper card, anchored to the row. -->
-                <div class="menu">
+                <!-- Floating paper card, anchored to the row. use:focusFirst
+                     (T33 slice 2) puts focus on the first item when the menu
+                     opens — the row keeps it (focus-within) and Esc/outside
+                     dismissal hands it back to the kebab. -->
+                <div class="menu" use:focusFirst>
                   <button
                     type="button"
                     class="menu-item"
@@ -388,7 +458,12 @@
          can only come from a length/type violation, never whitespace.
          A direct child of the sheet, after the flex:1 body: with little
          content it sits at the bottom; with many stacks the body grows and
-         the overlay scrolls. -->
+         the overlay scrolls.
+         Esc here is deliberately DIFFERENT from the desk's quick-add: the
+         drawer is a MODAL sheet, so Esc closes it via App.svelte's window
+         handler — dismissal is the correct dialog behavior — while the desk's
+         quick-add is not dismissal content: its input consumes Esc to
+         clear its draft instead (StackView's onQuickAddKeydown). -->
     <form class="create" onsubmit={onCreateSubmit}>
       <label class="visually-hidden" for="drawer-stack-name">Stack name</label>
       <input
@@ -401,7 +476,7 @@
       />
       <button type="submit" class="create-button" disabled={!canCreate}>+ New stack</button>
     </form>
-  </section>
+  </div>
 
   <!-- Confirm modal OVER the sheet: fixed backdrop (the same warm ink scrim
        the sheets sit on) above the overlay's z-index 10 and below
@@ -410,12 +485,26 @@
        being clicked its focused button unmounts and focus resets to <body>,
        so a later Esc targets body and never passes through the sheet at all
        — the WINDOW-CAPTURE keydown listener ("Esc layering", in the script)
-       consumes it regardless of target. Minimal semantics — role="dialog"
-       is enough; the focus trap is T33's. -->
+       consumes it regardless of target. Full dialog semantics (T33 slice
+       2): role="dialog" + dialogFocus traps Tab inside, focuses the first
+       control (Cancel) on open, and returns focus to the menuTrigger kebab
+       on close (the kebab is gone after a successful delete, so the
+       destroy falls back to body and onDeleteConfirm re-homes focus on the
+       sheet's Close button). The drawer sheet is inert while this is open. -->
   {#if pendingDelete !== null}
     <div class="backdrop">
-      <div class="modal" role="dialog">
-        <p class="modal-copy">{deleteCopy}</p>
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-title"
+        aria-describedby="delete-copy"
+        use:dialogFocus={{ initialFocus: "first", returnFocus: menuTrigger }}
+      >
+        <!-- Visually hidden dialog name — the visible copy below is the
+             describedby body, not the name. -->
+        <h3 id="delete-title" class="visually-hidden">Delete stack</h3>
+        <p id="delete-copy" class="modal-copy">{deleteCopy}</p>
         <div class="modal-actions">
           <button
             type="button"

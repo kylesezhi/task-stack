@@ -16,10 +16,13 @@
    * `touch-action: none` on the handle keeps the gesture a drag. Svelte
    * owns these listeners' lifecycle — unmount removes them — so if
    * App.svelte's window-level Esc closes the overlay mid-drag, the
-   * component unmounts and the drag dies with zero leaked listeners
-   * (keyboard polish / drag-cancel-on-Esc is T33's; here Esc closing the
-   * sheet mid-drag is accepted behavior). Listeners are NOT hand-rolled and
-   * there is deliberately no onDestroy cleanup.
+   * component unmounts and the drag dies with zero leaked listeners.
+   * Esc itself never gets that far while a drag is live (T33 slice 2):
+   * a window-CAPTURE keydown listener, attached only while draggedId is
+   * set, consumes Escape and cancels the drag WITHOUT closing the sheet —
+   * capture runs before App.svelte's window-level (bubble) Esc handler, so
+   * the sheet behind the drag stays open. The listener only exists during
+   * a drag, so Esc in the edit input behaves exactly as before.
    *
    * Hit-testing is pure geometry: the pointer's clientY against the row
    * elements' CURRENT getBoundingClientRect(), re-measured per event (WS
@@ -78,13 +81,27 @@
    * display:none — that would drop them from the tab order), and are always
    * visible at ≤640px or on non-hover devices (§5.3 "small quiet row actions
    * on hover/focus").
+   *
+   * -- Keyboard reorder (T33 slice 2) ---------------------------------------
+   * The ⠿ handle is a real BUTTON, so keyboard users can reach it; ArrowUp /
+   * ArrowDown there move that row one slot immediately through the SAME
+   * guarded commit path as a pointer drop (reorderNotes, one flight at a
+   * time). Boundary presses announce "Already at the top/bottom." through
+   * the one global live region instead of firing a request; a successful
+   * move re-focuses the same row's handle and announces the new position.
+   * The sheet is a role="dialog" with dialogFocus (T33 slice 2): focus is
+   * trapped inside while it is open and the App-inerted desk stays inert
+   * behind it.
    */
   import { fade } from "svelte/transition";
+  import { tick } from "svelte";
   import { snapshot, editNote, reorderNotes, tossNote } from "../lib/store";
   import { closeOverlay } from "../lib/view";
   import { reorderNoteIds } from "../lib/reorder";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
+  import { dialogFocus } from "../lib/dialog-focus";
+  import { announce } from "../lib/announce";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown" / ?? null: a view must never crash on a missing
@@ -182,6 +199,90 @@
     dropTargetId = null;
   }
 
+  // -- Keyboard reorder (T33 slice 2) ---------------------------------------
+  // ArrowUp/ArrowDown on a row's ⠿ handle move that row one slot, through
+  // the SAME guarded commit path as a pointer drop. Plain arrows only —
+  // modified arrows (browser/OS shortcuts) are left alone.
+  function onHandleKeydown(event: KeyboardEvent, rowId: string): void {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    void moveRow(rowId, event.key === "ArrowUp" ? -1 : 1);
+  }
+
+  async function moveRow(rowId: string, direction: -1 | 1): Promise<void> {
+    // Same one-thing-at-a-time guards as the pointer drag: no reorder while
+    // a drag, a commit, an edit, or a toss is live.
+    if (
+      activeStackId === null ||
+      draggedId !== null ||
+      committing ||
+      editingId !== null ||
+      tossingId !== null
+    ) {
+      return;
+    }
+    const currentIds = stackNotes.map((note) => note.id);
+    const from = currentIds.indexOf(rowId);
+    if (from === -1) return; // the row vanished mid-flight (remote mutation)
+    const to = from + direction;
+    if (to < 0) {
+      announce("Already at the top.");
+      return;
+    }
+    if (to >= currentIds.length) {
+      announce("Already at the bottom.");
+      return;
+    }
+    // currentIds[to] was proven in-bounds above; narrow it once for the
+    // no-unchecked-index compiler.
+    const targetId = currentIds[to];
+    if (targetId === undefined) return;
+    const newIds = reorderNoteIds(currentIds, rowId, targetId);
+    // Defensive no-op (reorderNoteIds can't produce one for a real neighbor
+    // swap, but never PUT an unchanged id set).
+    if (newIds.join("\u0000") === currentIds.join("\u0000")) return;
+    // Whether the row's handle held focus BEFORE the request — it is
+    // re-focused after the commit only in that case (never stolen).
+    const handleBefore = rowNodes[rowId]?.querySelector<HTMLElement>(".handle") ?? null;
+    const hadFocus = handleBefore !== null && document.activeElement === handleBefore;
+    committing = true;
+    actionError = null;
+    const result = await reorderNotes(activeStackId, newIds);
+    if (!result.ok) actionError = result.error;
+    committing = false; // the fresh snapshot (ok or not) re-renders the rows
+    if (!result.ok) return;
+    await tick();
+    // Re-query after the snapshot's re-render: the keyed row element
+    // survives the reorder, but its position (and possibly its contents)
+    // changed. Focus returns ONLY where it was before the flight.
+    const handleAfter = rowNodes[rowId]?.querySelector<HTMLElement>(".handle") ?? null;
+    if (hadFocus && handleAfter !== null) handleAfter.focus();
+    announce(`Moved to position ${newIds.indexOf(rowId) + 1} of ${newIds.length}.`);
+  }
+
+  // Esc cancels a LIVE drag without closing the sheet: a window-CAPTURE
+  // listener, attached only while draggedId is set (zero cost otherwise, and
+  // Esc in the edit input is untouched — no drag coexists with an edit).
+  // Capture at the window runs before App.svelte's bubble-phase window Esc,
+  // and stopPropagation there keeps the sheet behind the drag open. Svelte
+  // tears the listener down exactly when the drag ends (component unmount
+  // included) — no hand-rolled cleanup.
+  $effect(() => {
+    if (draggedId === null) return;
+    const onKeydownCapture = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      draggedId = null;
+      dropTargetId = null;
+      event.preventDefault();
+      // Consumed at window-capture: App.svelte's bubble-phase window
+      // handler never sees this keypress — the sheet stays open.
+      event.stopPropagation();
+    };
+    window.addEventListener("keydown", onKeydownCapture, true);
+    return () => window.removeEventListener("keydown", onKeydownCapture, true);
+  });
+
   // -- Inline edit (StackView T18's pattern, one editingId) -----------------
   let editingId = $state<string | null>(null);
   let editDraft = $state("");
@@ -196,10 +297,26 @@
     actionError = null;
   }
 
-  function cancelEdit(): void {
+  function cancelEdit(restoreFocus = true): void {
+    // Restore focus to the row's Edit button when the edit ended with focus
+    // INSIDE the form (Cancel, save, or the input's Esc): the form is about
+    // to unmount and would otherwise drop focus to <body>. A remote
+    // auto-cancel (restoreFocus=false) must never STEAL focus.
+    const rowId = editingId;
+    const active = document.activeElement;
+    const focusWasInForm =
+      restoreFocus &&
+      editingId !== null &&
+      active instanceof HTMLElement &&
+      active.closest("form.edit") !== null;
     editingId = null;
     editDraft = "";
     saving = false;
+    if (focusWasInForm && rowId !== null) {
+      void tick().then(() => {
+        rowNodes[rowId]?.querySelector<HTMLElement>('.row-action[aria-label="Edit"]')?.focus();
+      });
+    }
   }
 
   async function onEditSubmit(event: SubmitEvent): Promise<void> {
@@ -238,10 +355,11 @@
 
   // Auto-cancel when the note under edit leaves the snapshot: a remote
   // mutation (WS) tossed/completed it. Draft loss accepted (vanishing-conflict
-  // edge already covered by DECISIONS.md §4/§5).
+  // edge already covered by DECISIONS.md §4/§5) — and focus is never stolen
+  // from wherever it sits now.
   $effect(() => {
     if (editingId !== null && !stackNotes.some((note) => note.id === editingId)) {
-      cancelEdit();
+      cancelEdit(false);
     }
   });
 
@@ -252,9 +370,28 @@
     if (tossingId !== null || draggedId !== null) return;
     tossingId = rowId;
     actionError = null;
+    // Capture before the flight: the tossed row (and its focused button)
+    // unmounts on success, which would otherwise drop focus to <body>.
+    const index = stackNotes.findIndex((note) => note.id === rowId);
+    const focusWasInRow =
+      document.activeElement instanceof HTMLElement &&
+      rowNodes[rowId]?.contains(document.activeElement) === true;
     const result = await tossNote(rowId);
     if (!result.ok) actionError = result.error;
     tossingId = null; // the row vanishes via the snapshot, no manual removal
+    if (result.ok) {
+      await tick();
+      if (focusWasInRow && document.activeElement === document.body) {
+        // Same-slot handle in the re-rendered list (the row at the tossed
+        // note's former index); with no rows left, the sheet's Close.
+        const sheet = document.querySelector<HTMLElement>(".sheet");
+        const handles = Array.from(sheet?.querySelectorAll<HTMLElement>(".rows .handle") ?? []);
+        const target =
+          handles[Math.min(Math.max(index, 0), handles.length - 1)] ??
+          sheet?.querySelector<HTMLElement>(".sheet-close");
+        target?.focus();
+      }
+    }
   }
 </script>
 
@@ -272,11 +409,26 @@
      while the sheet subtree itself is inert during its slide-out. The SHEET
      slides (lib/sheet-motion: --motion-sheet, fade under reduced motion). -->
 <div class="overlay" in:fade={{ duration: 160 }}>
-  <section class="sheet" in:sheetIn={{ y: 20 }} out:sheetOut={{ y: 12 }}>
+  <!-- role="dialog" + aria-modal + use:dialogFocus (T33 slice 2): the sheet
+       IS the dialog — focus lands inside on open, Tab is trapped, and the
+       App-inerted desk stays out of Tab order and AT behind it. A div, not
+       a <section>: the section element's own landmark-ish semantics would
+       clash with (and svelte-check rejects) the interactive dialog role —
+       the class carries the sheet's look, not the tag. -->
+  <div
+    class="sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="list-title"
+    use:dialogFocus
+    in:sheetIn={{ y: 20 }}
+    out:sheetOut={{ y: 12 }}
+  >
     <header class="sheet-header">
       <!-- The accessible name stays "<stack> — N notes" (e2e asserts it);
-           the count tail is a .sheet-count span for the quiet label look. -->
-      <h2 class="sheet-heading">
+           the count tail is a .sheet-count span for the quiet label look.
+           The stable id names the dialog (aria-labelledby). -->
+      <h2 class="sheet-heading" id="list-title">
         {activeStack?.name ?? "unknown"} —
         <span class="sheet-count"
           >{stackNotes.length} {stackNotes.length === 1 ? "note" : "notes"}</span
@@ -285,8 +437,9 @@
       <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
-         the document's only <main>; sheets are dialogs, not mains. Full focus
-         management (inert background, aria-modal) is deferred to T33. -->
+         the document's only <main>; sheets are dialogs, not mains. Focus
+         management landed with T33 slice 2 (dialogFocus above; the desk is
+         inerted by App.svelte while this sheet is open). -->
     <div class="sheet-body">
       {#if stackNotes.length === 0}
         <!-- DESIGN.md §5.3's empty-list copy; reachable by tossing the last
@@ -296,6 +449,15 @@
              only when N > 0. -->
         <p class="empty">Nothing buried. Lucky you.</p>
       {:else}
+        <!-- Reorder instructions, ONCE for the whole list (T33 slice 2): the
+             hidden line is the handle's aria-describedby target (AT-only);
+             the visible hint is quiet, aria-hidden (the ⠿ glyph and ↑ ↓
+             arrows are decorative — the buttons' own names already say it),
+             and styled from tokens to keep the sheet's plain look. -->
+        <p id="list-reorder-hint" class="visually-hidden">
+          Use the up and down arrow keys to move this note.
+        </p>
+        <p class="reorder-hint" aria-hidden="true">Drag a row, or focus ⠿ and press ↑ ↓.</p>
         <ol class="rows">
           {#each stackNotes as note (note.id)}
             <li
@@ -317,14 +479,17 @@
                     use:focusOnMount
                   />
                   <button type="submit" class="save" disabled={!canSave}>Save</button>
-                  <button type="button" class="cancel" onclick={cancelEdit}>Cancel</button>
+                  <button type="button" class="cancel" onclick={() => cancelEdit()}>Cancel</button>
                 </form>
               {:else}
                 <button
                   type="button"
                   class="handle"
                   aria-label="Drag to reorder"
+                  aria-keyshortcuts="ArrowUp ArrowDown"
+                  aria-describedby="list-reorder-hint"
                   onpointerdown={(event) => startDrag(event, note.id)}
+                  onkeydown={(event) => onHandleKeydown(event, note.id)}
                 >
                   ⠿
                 </button>
@@ -360,7 +525,7 @@
         <p class="error" role="alert">{actionError}</p>
       {/if}
     </div>
-  </section>
+  </div>
 </div>
 
 <style>
@@ -376,6 +541,17 @@
   /* -- The flat ledger of rows (§5.3: deliberately plain — top of stack
    * first, no grouping, no boxes around rows; rows separate on a hairline
    * and the paper tone shifts on hover instead of drawing a border). ---- */
+  /* -- Reorder hints (T33 slice 2): the visible one is quiet ink at label
+   * size, centered over the rows, with modest air below — tokens only, so
+   * it reads as part of the sheet's plain paper, not an instruction box. */
+  .reorder-hint {
+    margin: 0 0 var(--space-sm);
+    width: 100%;
+    text-align: center;
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
+  }
+
   .rows {
     width: 100%;
     margin: 0;

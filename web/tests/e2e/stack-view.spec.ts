@@ -70,7 +70,9 @@ test("push, Done, edit, and Toss behave like a stack", async ({ page, request })
   // in the stage.
   const desktop = await emptyState.evaluate((el) => {
     const box = el.getBoundingClientRect();
-    const stage = el.closest("main");
+    // The stage is the div inside the desk <main> (T33 made the desk the
+    // main landmark; the stage demoted to a div).
+    const stage = el.closest(".stage");
     const stageBox = stage?.getBoundingClientRect();
     return {
       width: box.width,

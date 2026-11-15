@@ -33,6 +33,14 @@ function rowOf(page: Page, name: string) {
   return page.getByRole("listitem").filter({ hasText: name });
 }
 
+/** The delete-confirm modal, scoped to its backdrop. Since T33 slice 2 the
+ * drawer SHEET itself is a role="dialog" as well (sheets are dialogs), so
+ * a bare page-level getByRole("dialog") would match both; the modal is the
+ * one dialog inside .backdrop (durable class of the modal's wrapper). */
+function modalOf(page: Page) {
+  return page.locator(".backdrop").getByRole("dialog");
+}
+
 test("the drawer creates, renames, deletes, and switches stacks", async ({
   page,
   request,
@@ -166,7 +174,7 @@ test("the drawer creates, renames, deletes, and switches stacks", async ({
 
   // Cancel keeps the row and closes the modal.
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(modalOf(page)).toHaveCount(0);
   await expect(lettersRow).toContainText("(2)");
 
   // Esc path (capture-phase regression guard): re-open the modal and press
@@ -180,9 +188,9 @@ test("the drawer creates, renames, deletes, and switches stacks", async ({
   // The modal must actually be open before the Esc below — otherwise an
   // open kebab menu's capture listener would consume it and all three
   // assertions after it would pass vacuously.
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(modalOf(page)).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0); // modal cancelled
+  await expect(modalOf(page)).toHaveCount(0); // modal cancelled
   await expect(page.getByRole("heading", { name: "Stacks" })).toBeVisible(); // sheet STILL open
   await expect(lettersRow).toContainText("(2)"); // nothing deleted
 
@@ -190,8 +198,8 @@ test("the drawer creates, renames, deletes, and switches stacks", async ({
   // completed entry survives with stackId → null and the kept stackName.
   await lettersRow.getByRole("button", { name: "Actions for Letters" }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await modalOf(page).getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(modalOf(page)).toHaveCount(0);
   await expect(lettersRow).toHaveCount(0); // row gone
   const afterDeleteLetters = await stateOf(request);
   expect(afterDeleteLetters.notes.some((note) => note.stackId === lettersId)).toBe(false);
@@ -214,8 +222,8 @@ test("the drawer creates, renames, deletes, and switches stacks", async ({
   await expect(
     page.getByText("Delete 'Projects'? It has no notes. Completed notes stay in the Archive."),
   ).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await modalOf(page).getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(modalOf(page)).toHaveCount(0);
   await expect(projectsRow).toHaveCount(0);
   // Server truth: the drawer-front survivor (stacks[0], position 1) became
   // active — self-sufficient, true whether or not leftover stacks exist.

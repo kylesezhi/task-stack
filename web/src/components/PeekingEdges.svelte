@@ -5,10 +5,10 @@
    * VISUAL-ONLY and deliberately announced to nobody: the edges carry no
    * text (DESIGN.md §3 "no text is visible on them") and the "+N more"
    * scrap is decorative chrome — every element is aria-hidden and
-   * pointer-events: none, so assistive tech never receives it. The
-   * deep-pile count reaches everyone through the durable paths instead —
-   * the .title chrome ("40 notes") and the "See all N" link — and T33 owns
-   * the full a11y/announcement pass.
+   * pointer-events: none, so assistive tech never receives it (the T33
+   * a11y pass kept these decorative elements out of AT deliberately).
+   * The deep-pile count reaches everyone through the durable paths —
+   * the .title chrome ("40 notes") and the "See all N" link.
    *
    * Props arrive pre-capped and deepest-first via lib/edge-style's
    * peekingEdges() (deepest notes FIRST — they paint behind shallower

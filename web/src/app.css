@@ -45,6 +45,16 @@ textarea {
   font-family: inherit;
 }
 
+/* T33: ONE token-based keyboard focus ring for every interactive control.
+ * The UA default is inconsistent and near-invisible on the warm palette;
+ * :where() zeroes the specificity so component/sheet rules still win (the
+ * sheet-input ring in sheets.css keeps its accent styling on top of this).
+ * Token-only (--ink) per the colors-from-tokens guard. */
+:where(button, input, select, textarea, a, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 /* T16 mechanics shell → T32: the overlays are now the shared paper-sheet
  * layer, and their rules live in web/src/sheets.css (imported above). This
  * file keeps only the desk ground; the connection note in App.svelte still

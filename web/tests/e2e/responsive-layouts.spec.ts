@@ -509,7 +509,10 @@ test("the desk and its sheets stay inside the viewport at every breakpoint", asy
   await expectNoHorizontalScroll(page); // the drawer sheet itself
   await page.getByRole("button", { name: `Actions for ${LONG_NAME}` }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  const modal = page.getByRole("dialog");
+  // The delete-confirm modal, scoped to its backdrop: the drawer SHEET is a
+  // role="dialog" too since T33 slice 2 (sheets are dialogs), so a bare
+  // page-level getByRole("dialog") would match both.
+  const modal = page.locator(".backdrop").getByRole("dialog");
   await expect(modal).toBeVisible();
   await expect(modal).toContainText(`Delete '${LONG_NAME}'?`);
   const modalBox = await modal.boundingBox();

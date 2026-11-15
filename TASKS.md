@@ -276,7 +276,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
 
 ## Phase 5 — Deploy & ship
 
-- [ ] **T34 · Production build orchestration** — S
+- [x] **T34 · Production build orchestration** — S
   Root `pnpm build` builds web + server; single process serves both; env config
   (`PORT`, `DB_PATH`).
   **Done when:** `pnpm build && node server/dist/index.js` works end-to-end on

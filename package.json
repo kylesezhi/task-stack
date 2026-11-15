@@ -9,8 +9,10 @@
     "node": ">=24.15"
   },
   "scripts": {
+    "build": "pnpm -r build",
     "lint": "eslint . --max-warnings 0 && prettier --check .",
-    "format": "eslint --fix . && prettier --write ."
+    "format": "eslint --fix . && prettier --write .",
+    "start": "node server/dist/index.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

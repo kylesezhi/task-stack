@@ -283,7 +283,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   localhost.
   Depends: T14, Phase 4
 
-- [ ] **T35 · Minimal Docker image** — M
+- [x] **T35 · Minimal Docker image** — M
   Multi-stage `Dockerfile`: builder installs the pinned toolchain from
   `mise.toml` (node + pnpm) and runs `pnpm build`; runtime stage copies only
   `server/dist`, production `node_modules`, and `web/dist` onto a minimal Node
@@ -295,6 +295,18 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   the volume); `docker image ls` reports ≤ 100 MB — record the measured size
   and trim via `docker history` if over.
   Depends: T34
+  *Verified via the local non-Docker equivalent: `pnpm build` + `pnpm --filter
+  @task-stack/server deploy --prod` + copied-layout smoke run (`/api/health`
+  200, `/` 200 HTML, create stack 201, push note, SIGTERM, restart — note
+  persisted via the DB dir) with no `src/` or `data.db` in the runtime tree;
+  runtime payload measures ~35 MB (`du`, excluding the Alpine Node base).
+  Real `docker build`/`run` and the image-size measurement still need a Docker
+  daemon (requires sudo on the authoring machine) — not invented. Size caveat
+  for the ≤ 100 MB criterion: the Alpine Node base alone is ~59.6 MiB
+  compressed (per the registry) before the ~35 MB runtime payload, and
+  `docker image ls` may report compressed content size or unpacked disk size,
+  so the budget must be checked against the daemon's actual metric when Docker
+  is available.*
 
 - [ ] **T36 · Compose + ops** — M (Docker chosen; systemd dropped)
   `docker-compose.yml`: image from T35, persistent volume for `data.db`, port

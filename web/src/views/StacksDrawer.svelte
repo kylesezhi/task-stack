@@ -66,6 +66,7 @@
   import { closeOverlay } from "../lib/view";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
   import { dialogFocus, focusFirst } from "../lib/dialog-focus";
+  import Icon from "../components/Icon.svelte";
 
   const stacks = $derived($snapshot?.stacks ?? []);
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
@@ -362,9 +363,17 @@
     out:sheetOut={{ x: -32 }}
   >
     <header class="sheet-header">
-      <h2 class="sheet-heading" id="drawer-title">Stacks</h2>
-      <span class="sheet-count">{stacks.length === 1 ? "1 stack" : `${stacks.length} stacks`}</span>
-      <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
+      <div class="sheet-title-block">
+        <h2 class="sheet-heading" id="drawer-title">
+          Stacks
+          <span class="sheet-count" aria-hidden="true"
+            >{stacks.length === 1 ? "1 stack" : `${stacks.length} stacks`}</span
+          >
+        </h2>
+      </div>
+      <button type="button" class="sheet-close" aria-label="Close" onclick={closeOverlay}>
+        <Icon name="close" />
+      </button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
          the document's only <main>; sheets are dialogs, not mains. Focus
@@ -402,15 +411,21 @@
               </span>
               <!-- The row's ONE main button: switch + identity (name, count,
                    marker). Text format "name (N)" and "— active" is durable —
-                   the e2e asserts both. -->
+                   the e2e asserts both: the count and marker live in a quiet
+                   subline under the prominent name. -->
               <button
                 type="button"
                 class="stack-button"
                 onclick={() => onSwitch(stack.id)}
                 disabled={switchingId !== null}
               >
-                <span class="name">{stack.name}</span> ({count})
-                {#if isActive}<span class="active">— active</span>{/if}
+                <span class="name-row">
+                  <span class="name">{stack.name}</span>
+                  {#if isActive}<span class="dot" aria-hidden="true"></span>{/if}
+                </span>
+                <span class="sub"
+                  >({count}){#if isActive}<span class="active"> — active</span>{/if}</span
+                >
               </button>
               <button
                 type="button"
@@ -419,7 +434,7 @@
                 aria-expanded={openMenuId === stack.id}
                 onclick={(event) => toggleMenu(event, stack.id)}
               >
-                ⋮
+                <Icon name="kebab" />
               </button>
               {#if openMenuId === stack.id}
                 <!-- Floating paper card, anchored to the row. use:focusFirst
@@ -432,13 +447,16 @@
                     class="menu-item"
                     onclick={() => startRename(stack.id, stack.name)}
                   >
+                    <Icon name="edit" size={16} />
                     Rename
                   </button>
+                  <div class="menu-divider" aria-hidden="true"></div>
                   <button
                     type="button"
                     class="menu-item delete"
                     onclick={() => startDelete(stack.id)}
                   >
+                    <Icon name="delete" size={16} />
                     Delete
                   </button>
                 </div>
@@ -465,16 +483,21 @@
          quick-add is not dismissal content: its input consumes Esc to
          clear its draft instead (StackView's onQuickAddKeydown). -->
     <form class="create" onsubmit={onCreateSubmit}>
-      <label class="visually-hidden" for="drawer-stack-name">Stack name</label>
-      <input
-        id="drawer-stack-name"
-        type="text"
-        bind:value={createDraft}
-        maxlength={STACK_NAME_MAX_LENGTH}
-        placeholder="Name this stack"
-        autocomplete="off"
-      />
-      <button type="submit" class="create-button" disabled={!canCreate}>+ New stack</button>
+      <!-- The label keeps its durable "Stack name" text (e2e's getByLabel);
+           it renders as the mockups' visible micro-label over the footer
+           input instead of hiding. -->
+      <label class="create-label" for="drawer-stack-name">Stack name</label>
+      <div class="create-row">
+        <input
+          id="drawer-stack-name"
+          type="text"
+          bind:value={createDraft}
+          maxlength={STACK_NAME_MAX_LENGTH}
+          placeholder="Name this stack"
+          autocomplete="off"
+        />
+        <button type="submit" class="create-button" disabled={!canCreate}>+ New stack</button>
+      </div>
     </form>
   </div>
 
@@ -501,6 +524,11 @@
         aria-describedby="delete-copy"
         use:dialogFocus={{ initialFocus: "first", returnFocus: menuTrigger }}
       >
+        <!-- The mockups' pinned desk notice (stacks_drawer_delete_confirm's
+             "Pinned Desk Notice Card"): vermilion tack + tape sheen over
+             the paper card. Purely decorative over the named dialog. -->
+        <span class="tack" aria-hidden="true"><span class="tack-pin"></span></span>
+        <span class="tape" aria-hidden="true"></span>
         <!-- Visually hidden dialog name — the visible copy below is the
              describedby body, not the name. -->
         <h3 id="delete-title" class="visually-hidden">Delete stack</h3>
@@ -522,12 +550,17 @@
             onclick={onDeleteConfirm}
             disabled={deletingId !== null}
           >
-            Delete
+            <Icon name="delete" size={16} />
+            <span>Delete</span>
           </button>
         </div>
         {#if deleteError !== null}
           <p class="error" role="alert">{deleteError}</p>
         {/if}
+        <!-- The mockups' desk footnote ("ACTION CANNOT BE UNDONE"): quiet
+             caps under the actions — true (no undo, DECISIONS.md §4) and
+             exclamation-free (§6). -->
+        <span class="modal-foot" aria-hidden="true">Action cannot be undone</span>
       </div>
     </div>
   {/if}
@@ -540,6 +573,27 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+  }
+
+  /* Title block + the mockups' dismiss X (a quiet round button carrying
+     the close glyph instead of the shared text Close — the aria-label
+     keeps the durable "Close" name). */
+  .sheet-title-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sheet-close {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    padding: 0;
+    font-size: inherit;
+    letter-spacing: normal;
   }
 
   .rows {
@@ -603,38 +657,50 @@
   .pictogram {
     position: relative;
     flex: none;
-    width: 1.1rem;
-    height: 1.35rem;
+    width: 1.5rem;
+    height: 1.75rem;
   }
 
   .pictogram .layer {
     position: absolute;
-    inset: 0;
-    border-radius: var(--radius-note);
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 0.125rem;
   }
 
   .pictogram .back {
+    top: 0;
+    left: 0;
     background: var(--paper-shade);
-    transform: rotate(5deg) translate(0.08rem, -0.06rem);
+    transform: rotate(4deg);
   }
 
   .pictogram .mid {
+    top: 0.125rem;
+    left: 0.125rem;
     background: var(--gold-soft);
-    transform: rotate(-3deg) translate(-0.06rem, 0.08rem);
+    transform: rotate(-3deg);
   }
 
   .pictogram .front {
+    top: 0.25rem;
+    left: 0.25rem;
     background: var(--gold-dim);
+    box-shadow: var(--shadow-note-edge-far);
     transform: rotate(1deg);
   }
 
-  /* The row's ONE main button: switch + identity (name, count, marker). */
+  /* The row's ONE main button: switch + identity (name over a quiet
+     (N) subline, the active marker trailing it). A column: the prominent
+     handwritten-ish name first, the count second (mockup "Work / 8 notes
+     • current" — parens kept: e2e asserts the "(N)" shape). */
   .stack-button {
     flex: 1;
     min-width: 0;
     display: flex;
-    align-items: baseline;
-    gap: 0.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.125rem;
     background: none;
     border: none;
     padding: 0;
@@ -648,10 +714,36 @@
     cursor: default;
   }
 
+  .name-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .name {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  /* The mockups' active presence dot (vermilion, next to the active name —
+     stacks_drawer_delete_confirm's "bg-primary" bead). aria-hidden: the
+     "— active" tail carries the meaning. */
+  .dot {
+    flex: none;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .sub {
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
     white-space: nowrap;
   }
 
@@ -704,6 +796,9 @@
   }
 
   .menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
     background: none;
     border: none;
     text-align: left;
@@ -716,6 +811,13 @@
 
   .menu-item:hover {
     background: var(--paper-shade);
+  }
+
+  /* The mockups' hairline between the menu's items. */
+  .menu-divider {
+    height: 1px;
+    background: var(--paper-edge);
+    margin-inline: var(--space-sm);
   }
 
   /* Delete leans accent — the destructive item reads as such before the
@@ -779,18 +881,32 @@
     color: var(--ink-body);
   }
 
-  /* -- Footer create form: a paper slip pinned to the bottom of the sheet
-     (it follows the flex:1 body), warm paper with a top hairline. Its
-     input shrinks beside the button instead of stretching the row
+  /* -- Footer create form: the mockups' "Create new deck" block — a
+     visible micro-label over an input row, pinned to the bottom of the
+     sheet (it follows the flex:1 body), warm paper with a top hairline.
+     Its input shrinks beside the button instead of stretching the row
      (T28 §9); the button is the paper-shade chip with accent ink. */
   .create {
     flex: none;
     display: flex;
-    align-items: center;
-    gap: var(--space-sm);
+    flex-direction: column;
+    gap: var(--space-xs);
     background: var(--paper-warm);
     border-top: 1px solid var(--paper-edge);
     padding: var(--space-md) var(--space-lg);
+  }
+
+  .create-label {
+    color: var(--ink-quiet);
+    font-size: var(--text-label-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .create-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
   }
 
   .create input {
@@ -843,22 +959,57 @@
   }
 
   /* The modal: a paper card with the sheet shadow and the sheet radius,
-     tilted a whisper (-0.3deg — hand-placed, §2, not a grid). */
+     tilted a whisper (-0.75deg — the mockups' hand-placed pinned notice,
+     not a grid). */
   .modal {
+    position: relative;
     background: var(--paper);
     border: 1px solid var(--paper-edge);
     border-radius: var(--radius-sheet);
     box-shadow: var(--shadow-sheet);
-    padding: var(--space-lg);
-    transform: rotate(-0.3deg);
-    /* Fits at 390px: min() caps at the desktop 24rem and falls back to
+    padding: var(--space-xl) var(--space-lg) var(--space-lg);
+    transform: rotate(-0.75deg);
+    /* Fits at 390px: min() caps at the desktop 26rem and falls back to
        the padded backdrop's width on narrow viewports (T28 §9 — the
        confirm copy names the stack, so the box must never overflow). */
-    width: min(24rem, 100%);
-    max-width: 24rem;
+    width: min(26rem, 100%);
+    max-width: 26rem;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    text-align: center;
     gap: 0.75rem;
+  }
+
+  /* The mockups' vermilion desk tack pinning the notice (a ring + pin
+     dot, primary-container over primary-soft — tokens only). */
+  .tack {
+    position: absolute;
+    top: -0.875rem;
+    left: 50%;
+    translate: -50% 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    box-shadow: var(--shadow-input);
+    display: grid;
+    place-items: center;
+  }
+
+  .tack-pin {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* The mockups' tape strip under the tack (a short paper-shade pill). */
+  .tape {
+    width: 5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--paper-shade);
   }
 
   .modal-copy {
@@ -895,6 +1046,9 @@
   }
 
   .modal-actions .delete {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
     background: var(--accent);
     border: none;
     border-radius: var(--radius-note);
@@ -911,6 +1065,17 @@
   .modal-actions .delete:disabled {
     cursor: default;
     box-shadow: var(--shadow-btn-accent-active);
+  }
+
+  /* The mockups' desk footnote under the actions: whisper-quiet tracked
+     caps — true (no undo, DECISIONS.md §4), exclamation-free (§6). Solid
+     --ink-quiet (no dimming opacity): the footnote is real copy and keeps
+     the quiet-ink AA floor the suite asserts. */
+  .modal-foot {
+    color: var(--ink-quiet);
+    font-size: var(--text-label-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   .visually-hidden {

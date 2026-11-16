@@ -71,7 +71,8 @@
      column, gains the responsive gutters (--gutter, mobile pair in the
      media block), and the honest-viewport height — the two-line dvh
      cascade (DECISIONS.md §11 evergreen-only; the URL bar must not lie
-     about the viewport on phones). */
+     about the viewport on phones). The card language matches the desk's
+     quick-add slip (paper surface, hairline, input-slip shadow). */
   main {
     /* pre-dvh fallback, then the evergreen dynamic viewport */
     min-height: 100vh;
@@ -87,28 +88,71 @@
 
   h1 {
     margin: 0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   .line {
-    margin: 0;
+    margin: 0 0 var(--space-sm);
     color: var(--ink-muted);
   }
 
-  /* The create form spans the gutters and caps at 24rem (T28 §9: the form
-     fills the mobile layout without ever overflowing it); the input takes
-     the remaining space beside the button (flex:1 + min-width:0 — a
-     80-char unbroken stack name must shrink the input, never stretch the
-     row; STACK_NAME_MAX_LENGTH guard). */
+  /* The create form is the mockups' paper slip: white paper, hairline,
+     the input-slip composite shadow, comfortable padding (T28 §9: the
+     form fills the mobile gutters without ever overflowing them — an
+     80-char unbroken stack name must shrink the input, never stretch
+     the row; STACK_NAME_MAX_LENGTH guard). */
   form {
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: var(--space-sm);
     width: 100%;
     max-width: 24rem;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-input);
+    padding: var(--space-md);
+    text-align: left;
   }
 
   form input {
     flex: 1;
     min-width: 0;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--ink-body);
+    font-size: var(--text-body-md);
+  }
+
+  form input::placeholder {
+    color: var(--ink-quiet);
+  }
+
+  form button {
+    align-self: flex-end;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: var(--radius-note);
+    box-shadow: var(--shadow-btn-accent);
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-label-md);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  form button:disabled {
+    box-shadow: none;
+    background: var(--paper-shade);
+    color: var(--ink-quiet);
+    cursor: default;
+  }
+
+  form button:not(:disabled):hover {
+    background: var(--accent-hover);
   }
 
   .visually-hidden {

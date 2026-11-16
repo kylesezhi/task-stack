@@ -99,9 +99,11 @@
   import { closeOverlay } from "../lib/view";
   import { reorderNoteIds } from "../lib/reorder";
   import { NOTE_TEXT_MAX_LENGTH } from "@task-stack/shared";
+  import { noteColorVar } from "../lib/note-style";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
   import { dialogFocus } from "../lib/dialog-focus";
   import { announce } from "../lib/announce";
+  import Icon from "../components/Icon.svelte";
 
   const activeStackId = $derived($snapshot?.activeStackId ?? null);
   // Defensive ?? "unknown" / ?? null: a view must never crash on a missing
@@ -425,16 +427,26 @@
     out:sheetOut={{ y: 12 }}
   >
     <header class="sheet-header">
-      <!-- The accessible name stays "<stack> — N notes" (e2e asserts it);
-           the count tail is a .sheet-count span for the quiet label look.
-           The stable id names the dialog (aria-labelledby). -->
-      <h2 class="sheet-heading" id="list-title">
-        {activeStack?.name ?? "unknown"} —
-        <span class="sheet-count"
-          >{stackNotes.length} {stackNotes.length === 1 ? "note" : "notes"}</span
-        >
-      </h2>
-      <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
+      <!-- The accessible name stays "<stack> — N notes" (e2e asserts it):
+           the visible badge carries the count tail, aria-hidden, while a
+           visually-hidden span keeps the name's exact spoken shape. The
+           stable id names the dialog (aria-labelledby). -->
+      <div class="sheet-title-block">
+        <h2 class="sheet-heading" id="list-title">
+          <span class="sr-name"
+            >{activeStack?.name ?? "unknown"} — {stackNotes.length}
+            {stackNotes.length === 1 ? "note" : "notes"}</span
+          >
+          <span aria-hidden="true">{activeStack?.name ?? "unknown"}</span>
+          <span class="sheet-count" aria-hidden="true"
+            >{stackNotes.length} {stackNotes.length === 1 ? "note" : "notes"}</span
+          >
+        </h2>
+        <p class="sheet-sub">Stack order (top note first · next in line)</p>
+      </div>
+      <button type="button" class="sheet-close" aria-label="Close" onclick={closeOverlay}>
+        <Icon name="close" />
+      </button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
          the document's only <main>; sheets are dialogs, not mains. Focus
@@ -449,21 +461,30 @@
              only when N > 0. -->
         <p class="empty">Nothing buried. Lucky you.</p>
       {:else}
-        <!-- Reorder instructions, ONCE for the whole list (T33 slice 2): the
-             hidden line is the handle's aria-describedby target (AT-only);
-             the visible hint is quiet, aria-hidden (the ⠿ glyph and ↑ ↓
-             arrows are decorative — the buttons' own names already say it),
-             and styled from tokens to keep the sheet's plain look. -->
+        <!-- Reorder instructions, ONCE for the whole list (T33 slice 2):
+             the hidden line is the handle's aria-describedby target
+             (AT-only); the visual hint lives in the sheet footer, next to
+             the return button, quiet and aria-hidden (the glyphs and arrows
+             are decorative — the buttons' own names already say it). -->
         <p id="list-reorder-hint" class="visually-hidden">
           Use the up and down arrow keys to move this note.
         </p>
-        <p class="reorder-hint" aria-hidden="true">Drag a row, or focus ⠿ and press ↑ ↓.</p>
+        <!-- The mockups' reassurance strip ("Present attention: 1 item —
+             Deliberate pace • No alarms", list_view_open_stack): the top
+             note owns the strip; quiet, aria-hidden (the desk's live region
+             already narrates it). position is 1-based. -->
+        <div class="reassure" aria-hidden="true">
+          <span class="reassure-dot"></span>
+          <span class="reassure-main">Present attention: 1 item</span>
+          <span class="reassure-side">Deliberate pace · No alarms</span>
+        </div>
         <ol class="rows">
-          {#each stackNotes as note (note.id)}
+          {#each stackNotes as note, index (note.id)}
             <li
               class="row"
               class:dragging={draggedId === note.id}
               class:drop-target={dropTargetId === note.id}
+              class:top={index === 0}
               bind:this={rowNodes[note.id]}
             >
               {#if editingId === note.id}
@@ -491,11 +512,25 @@
                   onpointerdown={(event) => startDrag(event, note.id)}
                   onkeydown={(event) => onHandleKeydown(event, note.id)}
                 >
-                  ⠿
+                  <Icon name="grip" />
                 </button>
-                <!-- .note-text is a durable e2e locator — the class lives
-                     where the TEXT lives. -->
-                <span class="note-text">{note.text}</span>
+                <!-- The mockups' palette tab: the note's own token color —
+                     the top row's deeper tint marks what you do next. -->
+                <span class="row-tab" aria-hidden="true" style:--row-color={noteColorVar(note.id)}
+                ></span>
+                <span class="row-main">
+                  {#if index === 0}
+                    <span class="top-badge" aria-hidden="true">Top Note</span>
+                  {/if}
+                  <!-- .note-text is a durable e2e locator — the class lives
+                       where the TEXT lives. -->
+                  <span class="note-text">{note.text}</span>
+                </span>
+                {#if index === 0}
+                  <span class="row-now" aria-hidden="true">Now</span>
+                {:else}
+                  <span class="row-index" aria-hidden="true">{index + 1}</span>
+                {/if}
                 <span class="row-actions">
                   <button
                     type="button"
@@ -504,7 +539,7 @@
                     onclick={() => startEdit(note.id, note.text)}
                     disabled={draggedId !== null}
                   >
-                    ✎
+                    <Icon name="edit" size={17} />
                   </button>
                   <button
                     type="button"
@@ -513,13 +548,21 @@
                     onclick={() => onToss(note.id)}
                     disabled={tossingId !== null || draggedId !== null}
                   >
-                    ×
+                    <Icon name="close" size={18} />
                   </button>
                 </span>
               {/if}
             </li>
           {/each}
         </ol>
+        <footer class="sheet-foot">
+          <p class="reorder-hint" aria-hidden="true">
+            Drag to reorder · Top note is what you do next
+          </p>
+          <button type="button" class="return" onclick={closeOverlay}>
+            Return to Stack View
+          </button>
+        </footer>
       {/if}
       {#if actionError !== null}
         <p class="error" role="alert">{actionError}</p>
@@ -529,29 +572,71 @@
 </div>
 
 <style>
-  /* The sheet's body centers its contents (the flat rows fill the width;
-   * the empty state and the error line center inside it). Padding and the
-   * paper background come from the shared layer (web/src/sheets.css). */
+  /* The sheet's body stacks its contents (the reassure strip, the rows,
+     the footer); the empty state and the error line center inside it.
+     Padding and the paper background come from the shared layer
+     (web/src/sheets.css). */
   .sheet-body {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
 
-  /* -- The flat ledger of rows (§5.3: deliberately plain — top of stack
-   * first, no grouping, no boxes around rows; rows separate on a hairline
-   * and the paper tone shifts on hover instead of drawing a border). ---- */
-  /* -- Reorder hints (T33 slice 2): the visible one is quiet ink at label
-   * size, centered over the rows, with modest air below — tokens only, so
-   * it reads as part of the sheet's plain paper, not an instruction box. */
-  .reorder-hint {
-    margin: 0 0 var(--space-sm);
-    width: 100%;
-    text-align: center;
+  /* The list header's subtitle (mockup "Stack order (top note first •
+     next in line)"): quiet body copy under the name. */
+  .sheet-title-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sheet-sub {
+    margin: 0.25rem 0 0;
     color: var(--ink-quiet);
-    font-size: var(--text-label-md);
+    font-size: var(--text-body-md);
   }
 
+  /* The mockups' reassurance strip (list_view_open_stack "Present
+     attention: 1 item • Deliberate pace • No alarms"): a quiet paper-warm
+     band under the header, dot + vermilion-accented main line left, the
+     aside right. Purely decorative (aria-hidden) — the live region
+     narrates the top note. */
+  .reassure {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    background: var(--paper-warm);
+    border-radius: var(--radius-note);
+    padding: var(--space-xs) var(--space-md);
+    margin-block-end: var(--space-sm);
+    font-size: var(--text-label-md);
+    color: var(--ink-quiet);
+  }
+
+  .reassure-dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .reassure-main {
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+
+  .reassure-side {
+    margin-left: auto;
+    font-size: var(--text-label-sm);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  /* -- The rows (§5.3: deliberately plain — top of stack first, no
+   * grouping, no sub-items; the mockups' flat ledger: full-bleed hairline
+   * rows, the top one tinted in its own palette color, warming on
+   * hover/focus). -------------------------------------------------------- */
   .rows {
     width: 100%;
     margin: 0;
@@ -564,14 +649,22 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
     background: transparent;
+    border-radius: var(--radius-note);
     transition: background-color 120ms var(--ease-lift);
   }
 
   /* Hairline between rows; the last row has no bottom border. */
   .row + .row {
     border-top: 1px solid var(--paper-edge);
+  }
+
+  /* The mockups' top-row tint (list_view_open_stack "bg-secondary-
+     container/15 hover:.../30"): the first row wears its own note color
+     at a whisper; hovering deepens it instead of warming plain. */
+  .row.top {
+    background: color-mix(in srgb, var(--row-color, var(--gold-soft)) 15%, transparent);
   }
 
   /* The row lifts in place on hover/focus — the sheet's warm tone, no
@@ -624,6 +717,35 @@
     color: var(--ink-body);
   }
 
+  /* The mockups' palette tab (list_view_open_stack's colored edge: a
+     2.5px-wide full-height color bar in the note's own token color). */
+  .row-tab {
+    flex: none;
+    align-self: stretch;
+    width: 0.625rem;
+    border-radius: 9999px;
+    background: var(--row-color);
+    box-shadow: var(--shadow-note-edge-far);
+  }
+
+  .row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The mockups' "TOP NOTE" badge: uppercase, vermilion ink, quiet size —
+     the only loud-ink text in the sheet (it marks what you do next). */
+  .top-badge {
+    color: var(--accent);
+    font-size: var(--text-label-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-block-end: 0.125rem;
+  }
+
   .note-text {
     /* DESIGN.md §2/§5.3: list rows keep the handwritten voice — Caveat,
        slightly smaller than the desk's top note (§5.3 rows are ledger
@@ -633,7 +755,6 @@
     line-height: 1.3;
     font-weight: 600;
     color: var(--ink);
-    flex: 1;
     min-width: 0;
     /* T28 worst-case guard (§9; shared/src/validation.ts
        NOTE_TEXT_MAX_LENGTH): a 280-char unbroken token must wrap, not
@@ -641,6 +762,76 @@
        (not break-word) also shrinks the token's min-content size, which
        is what lets the flex item above actually shrink below it. */
     overflow-wrap: anywhere;
+  }
+
+  /* The row's position slot: tabular numerals, the quietest ink. The top
+     row instead shows the mockups' "• Now" aside. */
+  .row-index,
+  .row-now {
+    flex: none;
+    color: var(--ink-quiet);
+    font-size: var(--text-label-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The spoken heading shape ("Garden — 3 notes") for AT: the visible
+     badge is aria-hidden, so this sr-only span keeps the name exact for
+     e2e's byRole lookup and screen readers alike. */
+  .sr-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* -- The mockups' sheet footer ("Drag to reorder • Top note is what you
+   * do next" + "Return to Stack View"): warm paper-warm band, hint quiet
+   * left, the paper-shade return chip right. ------------------------------ */
+  .sheet-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    background: var(--paper-warm);
+    border-radius: var(--radius-note);
+    padding: var(--space-sm) var(--space-md);
+    margin-block-start: var(--space-md);
+  }
+
+  .reorder-hint {
+    margin: 0;
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
+  }
+
+  .return {
+    flex: none;
+    background: var(--paper-shade);
+    border: none;
+    border-radius: var(--radius-note);
+    color: var(--ink-body);
+    font-size: var(--text-label-md);
+    font-weight: 600;
+    padding: var(--space-xs) var(--space-md);
+    box-shadow: var(--shadow-input);
+    cursor: pointer;
+  }
+
+  /* The mockups' dismiss X (list_view_open_stack's "Touch-Friendly Dismiss
+     Stamp"): a quiet round button carrying the close glyph instead of the
+     shared text Close — the aria-label keeps the durable "Close" name. */
+  .sheet-close {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    padding: 0;
+    font-size: inherit;
+    letter-spacing: normal;
   }
 
   /* -- Row actions: quiet ghost icon buttons (T32), revealed on row
@@ -670,8 +861,6 @@
     color: var(--ink-muted);
     cursor: pointer;
     padding: 0;
-    font-size: 1rem;
-    line-height: 1;
   }
 
   .row-action:hover {

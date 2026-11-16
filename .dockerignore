@@ -1,0 +1,40 @@
+# Keep the build context to build inputs only — the builder installs
+# dependencies from the lockfile and compiles from source, so nothing below
+# is needed inside the image.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (installed fresh inside the builder from pnpm-lock.yaml)
+**/node_modules
+
+# Build output (reproduced by pnpm build in the builder)
+**/dist
+
+# Local SQLite database (+ WAL/SHM siblings) — must never leak into an image
+**/data.db*
+
+# Environment / secrets (the example stays) — nested too; npmrc may hold
+# registry credentials
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+
+# Design references and mockup material — not build inputs
+reference/
+**/mockups/
+
+# Test artifacts
+coverage/
+web/test-results/
+web/playwright-report/
+
+# mise local overrides (personal)
+mise.local.toml
+
+# Logs & OS noise
+*.log
+.DS_Store

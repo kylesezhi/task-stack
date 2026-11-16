@@ -50,6 +50,7 @@
   import PeekingEdges from "../components/PeekingEdges.svelte";
   import PopCeremony from "../components/PopCeremony.svelte";
   import TossCeremony from "../components/TossCeremony.svelte";
+  import Icon from "../components/Icon.svelte";
   import { hiddenNoteCount, peekingEdges } from "../lib/edge-style";
   import { PushLandingTracker } from "../lib/push-land";
   import { DepartureTracker } from "../lib/departure";
@@ -398,12 +399,29 @@
      not mains — T16 rule), so ALL desk content lives inside it. -->
 <main class="desk">
   <header class="chrome">
-    <button type="button" onclick={() => openView("drawer")}>Stacks</button>
+    <!-- The mockups' pinned header (stack_view_home: fixed bar, hamburger
+         "Stacks" left, stack name + count quiet-center, Archive right): a
+         three-column grid so the centered title stays centered however
+         wide the two buttons grow. -->
+    <div class="chrome-side">
+      <button type="button" class="stacks-button" onclick={() => openView("drawer")}>
+        <span class="hamburger" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span>Stacks</span>
+      </button>
+    </div>
     <h1 class="title">
       {activeStack?.name ?? "unknown"}
       <span class="count"> {noteCount} {noteCount === 1 ? "note" : "notes"} </span>
     </h1>
-    <button type="button" onclick={() => openView("archive")}>Archive</button>
+    <div class="chrome-side chrome-side--right">
+      <button type="button" class="archive-button" onclick={() => openView("archive")}>
+        Archive
+      </button>
+    </div>
   </header>
 
   <!-- The stage demotes to a plain div (T33): the desk <main> above is now
@@ -551,13 +569,25 @@
          rule). The quick-add deliberately stays live: typing ahead during
          either ceremony is allowed. -->
     <div class="actions">
+      <!-- The mockups' order: quiet Toss left, the vermilion Done stamp
+           center, ghost Edit right — each with its line glyph (Icon). -->
+      <button
+        type="button"
+        class="toss"
+        onclick={onToss}
+        disabled={acting !== null || popGhost !== null || tossGhost !== null}
+      >
+        <Icon name="toss" />
+        <span>Toss</span>
+      </button>
       <button
         type="button"
         class="done"
         onclick={onDone}
         disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
-        Done
+        <span class="done-label">Done</span>
+        <span class="done-dot" aria-hidden="true"></span>
       </button>
       <button
         type="button"
@@ -566,15 +596,8 @@
         onclick={startEdit}
         disabled={acting !== null || popGhost !== null || tossGhost !== null}
       >
-        Edit
-      </button>
-      <button
-        type="button"
-        class="toss"
-        onclick={onToss}
-        disabled={acting !== null || popGhost !== null || tossGhost !== null}
-      >
-        Toss
+        <Icon name="edit" />
+        <span>Edit</span>
       </button>
     </div>
     {#if actionError !== null}
@@ -585,7 +608,8 @@
   {#if noteCount > 0}
     <footer class="below">
       <button type="button" class="link" onclick={() => openView("list")}>
-        See all {noteCount}
+        <span>See all {noteCount} {noteCount === 1 ? "note" : "notes"}</span>
+        <Icon name="arrow" size={14} />
       </button>
     </footer>
   {/if}
@@ -609,9 +633,17 @@
         aria-describedby="quick-add-hint"
         onkeydown={onQuickAddKeydown}
       />
-      <button type="submit" disabled={!canPush}>Push</button>
+      <div class="slip-foot">
+        <span class="hint-keys" aria-hidden="true"
+          ><kbd>/</kbd> to focus · <kbd>Enter</kbd> to push</span
+        >
+        <button type="submit" class="push" disabled={!canPush}>
+          <span>Push</span>
+          <Icon name="push" size={14} />
+        </button>
+      </div>
     </form>
-    <p class="hint" id="quick-add-hint">/ to focus · Enter to push</p>
+    <p class="hint sr-only" id="quick-add-hint">/ to focus · Enter to push</p>
     {#if pushError !== null}
       <p class="error" role="alert">{pushError}</p>
     {/if}
@@ -636,15 +668,114 @@
     display: flex;
     flex-direction: column;
     padding-inline: var(--gutter);
-    padding-block-start: var(--space-md);
+    /* The mockups' pinned-chrome desk (stack_view_home pt-16): the fixed
+       header owns the top band, the stage follows under it. */
+    padding-block-start: 5.25rem;
     gap: var(--space-sm);
   }
 
+  /* The mockups' pinned header (stack_view_home "fixed top-0 left-0
+     right-0 z-50 ... shadow-[0_1px_8px...]"): warm-tinted desk blur over a
+     three-column grid (Stacks / title / Archive) so the centered title
+     stays centered across button widths. */
   .chrome {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 0.5rem;
+    min-height: 4rem;
+    padding-inline: var(--gutter);
+    /* color-mix over --desk (evergreen-only, DECISIONS.md §11) so the blur
+       tints warm instead of freezing an rgba literal. */
+    background: color-mix(in srgb, var(--desk) 85%, transparent);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-chrome);
+  }
+
+  .chrome-side {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
+    justify-content: flex-start;
+  }
+
+  .chrome-side--right {
+    justify-content: flex-end;
+  }
+
+  .stacks-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    background: none;
+    border: none;
+    border-radius: var(--radius-note);
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--ink-quiet);
+    font-size: var(--text-label-lg);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      color 120ms var(--ease-lift),
+      background-color 120ms var(--ease-lift);
+  }
+
+  .stacks-button:hover {
+    color: var(--ink-body);
+    background: var(--paper-shade);
+  }
+
+  /* The mockups' hamburger (three tapering hand-drawn strokes): warm
+     strokes that take the body's ink on hover. aria-hidden — the
+     "Stacks" text is the name. */
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 0.875rem;
+  }
+
+  .hamburger span {
+    height: 1.5px;
+    border-radius: 9999px;
+    background: currentColor;
+  }
+
+  .hamburger span:nth-child(1) {
+    width: 0.875rem;
+  }
+
+  .hamburger span:nth-child(2) {
+    width: 0.75rem;
+  }
+
+  .hamburger span:nth-child(3) {
+    width: 0.625rem;
+  }
+
+  .archive-button {
+    background: none;
+    border: none;
+    border-radius: var(--radius-note);
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition:
+      color 120ms var(--ease-lift),
+      background-color 120ms var(--ease-lift);
+  }
+
+  .archive-button:hover {
+    color: var(--ink-body);
+    background: var(--paper-shade);
   }
 
   /* The chrome title is a centered COLUMN — stack name over the tiny
@@ -796,11 +927,18 @@
     font-size: 0.9rem;
   }
 
+  /* The mockups' action row (stack_view_home "Toss ← Done → Edit"):
+     quiet Toss left, the vermilion Done stamp center, ghost Edit right —
+     spread across the desktop max-width with the mobile mockup's wide
+     gaps. The DOM order IS Toss → Done → Edit. */
   .actions {
+    width: 100%;
+    max-width: 420px;
+    margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-lg);
   }
 
   .actions button {
@@ -816,6 +954,11 @@
   .done {
     /* The single loud primary (DESIGN.md §2/§5.1): vermilion accent, white
        on it — the mockup's Done replaces the old gray placeholder. */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
     background: var(--accent);
     color: var(--on-accent);
     border: none;
@@ -831,18 +974,60 @@
     letter-spacing: 0.04em;
   }
 
-  /* Ghost Edit + quietest-ghost Toss (§2/§5.1): bare ink, comfortable
-     padding on the desktop base; the mobile block raises both to
-     ≥44px hit targets without changing their quiet looks. A --paper-shade
-     hover fill gives the ghosts pointer feedback (no motion). Scoped to
-     `.actions` for the same reason the form rule is scoped to `.deck`
-     (see above): the class .edit is shared with the overlay form, and an
-     unscoped `:hover` fill would tint the whole pile whenever the form is
-     hovered. */
-  .actions .edit {
+  /* The mockups' sheen over the stamp's ink (stack_view_home
+     "bg-white/10 ... opacity on hover"): an ink-mix veil — color-mix, not
+     an rgba literal — that lights the stamp on hover. */
+  .done::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+    opacity: 0;
+    transition: opacity 120ms var(--ease-lift);
+  }
+
+  .done:hover:not(:disabled)::before {
+    opacity: 1;
+  }
+
+  .done:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .done-label {
+    font-weight: 600;
+    letter-spacing: 0.16em;
+  }
+
+  /* The mockups' ember dot on the stamp (stack_view_home's
+     primary-fixed-dim/70 bead): hot-ember ink, the stamp's quiet pulse. */
+  .done-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: var(--ember-hot);
+  }
+
+  /* Ghost Edit + quietest-ghost Toss (§2/§5.1): line glyph + label, bare
+     ink with comfortable padding on the desktop base; the mobile block
+     raises both to ≥44px hit targets without changing their quiet looks.
+     A --paper-shade hover fill gives the ghosts pointer feedback (no
+     motion). Scoped to `.actions` for the same reason the form rule is
+     scoped to `.deck` (see above): the class .edit is shared with the
+     overlay form, and an unscoped `:hover` fill would tint the whole pile
+     whenever the form is hovered. */
+  .actions .edit,
+  .actions .toss {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     background: none;
     border: none;
+    border-radius: var(--radius-note);
     padding: var(--space-xs) var(--space-sm);
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
   }
 
   .actions .edit:hover,
@@ -850,40 +1035,47 @@
     background: var(--paper-shade);
   }
 
-  .actions .toss {
-    background: none;
-    border: none;
-    color: var(--ink-quiet);
-    padding: var(--space-xs) var(--space-sm);
-  }
-
   .below {
     display: flex;
     justify-content: center;
   }
 
+  /* The mockups' quiet stack link (stack_view_home "See all 8 notes →"):
+     no underline, ghost ink that deepens on hover, trailing arrow glyph. */
   .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     border: none;
     background: none;
-    text-decoration: underline;
-    color: var(--ink-muted);
+    color: var(--ink-quiet);
+    font-size: var(--text-label-md);
+    letter-spacing: 0.03em;
     cursor: pointer;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-note);
+    transition:
+      color 120ms var(--ease-lift),
+      background-color 120ms var(--ease-lift);
+  }
+
+  .link:hover {
+    color: var(--ink-body);
+    background: var(--paper-shade);
   }
 
   /* Quick-add (DESIGN.md §3 "quick-add input — styled like a blank note"):
      the strip centers its slip; the slip itself is the paper affordance at
      BOTH breakpoints (mockup "quick-add paper slip" — reference
-     mobile_stack_view_home): paper surface, --paper-edge hairline,
-     --radius-note corners, the input-slip shadow, and comfortable slip
-     padding. width:100% + max-width spans the mobile gutters while
-     capping the desktop slip at 26rem; the input takes the rest
-     (flex:1 + min-width:0 — min-width:0 is what lets a flex item shrink
+     mobile_stack_view_home "Clean Quick-Add Paper Slip"): paper surface,
+     --paper-edge hairline, radius-lg corners, the input-slip shadow, and
+     comfortable slip padding. width:100% + max-width centers the desktop
+     slip at the mockups' 420px tray; the writing line takes the rest
+     (flex + min-width:0 — min-width:0 is what lets a flex item shrink
      below its content, so a 280-char paste never stretches the row).
      On mobile the whole strip pins to the bottom (media block below). */
   .quick-add {
-    /* T33: column so the §3 hint sits UNDER the slip — the slip keeps its
-       own width (100% up to the 26rem cap) and the hint centers beneath
-       it; the gap is --space-xs, no new spacing value. */
+    /* The slip centers itself; the sr-only §3 hint is the AT path. */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -897,43 +1089,106 @@
   }
 
   .hint {
-    /* T33 (§3): the visible keyboard hint under the slip — quiet ink at
-       the label size, centered, no margin (the section's gap owns the
-       rhythm). --ink-quiet, not muted: real copy keeps its AA floor. */
+    /* T33 (§3): the keyboard hint — sr-only on the desk (the visible
+       shortcut row lives INSIDE the slip, mockup-style); --ink-quiet
+       keeps the AT-announced copy on the real-copy floor. */
     margin: 0;
     text-align: center;
     color: var(--ink-quiet);
     font-size: var(--text-label-md);
   }
 
+  /* sr-only is a deliberate override of the .hint centering — it keeps its
+     name and association, not its layout. clip, not opacity, so AT reads
+     it exactly like the T33 live region pattern. */
+  .hint.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* The mockups' slip (stack_view_home "Clean Quick-Add Paper Slip"):
+     two rows — the writing line, then the hint + Push foot. */
   .quick-add form {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: var(--space-sm);
     width: 100%;
-    max-width: 26rem;
+    max-width: 420px;
     background: var(--paper);
     border: 1px solid var(--paper-edge);
-    border-radius: var(--radius-note);
+    border-radius: var(--radius-sheet);
     box-shadow: var(--shadow-input);
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-md);
+    transition: box-shadow 120ms var(--ease-lift);
+  }
+
+  .quick-add form:focus-within {
+    box-shadow: var(--shadow-input-focus);
   }
 
   .quick-add input {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--ink-body);
+    font-size: var(--text-body-md);
   }
 
-  /* The Push button, quiet per the mobile mockup: a paper-shade chip with
-     the accent as INK only (the slip is the affordance, not the button —
-     §2 "quiet and few"). radius-note chips it into the slip. Focus styling
-     is the T33 global ring (app.css) — nothing local here. */
-  .quick-add button {
-    background: var(--paper-shade);
+  .quick-add input::placeholder {
+    color: var(--ink-quiet);
+  }
+
+  /* The slip foot: "/ to focus • Enter to push" left (mockups' kbd-chip
+     keys), the Push chip right. */
+  .slip-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-top: var(--space-xs);
+  }
+
+  .hint-keys {
+    color: var(--ink-quiet);
+    font-size: var(--text-label-sm);
+  }
+
+  /* The mockups' kbd chips ("bg-surface-container ... rounded ... mono"):
+     quiet paper keys, system mono (T24's mono decision). */
+  .hint-keys kbd {
+    font-family: var(--font-mono);
+    font-size: inherit;
+    background: var(--paper-warm);
+    border-radius: var(--radius-note);
+    padding: 0 0.25rem;
+  }
+
+  /* The Push button, quiet per the mockups: a paper-warm chip with the
+     accent as INK only and the upward glyph (the slip is the affordance,
+     not the button — §2 "quiet and few"). radius-note chips it into the
+     slip. Focus styling is the T33 global ring (app.css) — nothing local
+     here. */
+  .quick-add .push {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--paper-warm);
     color: var(--accent);
     border: none;
     border-radius: var(--radius-note);
     padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-label-md);
+    cursor: pointer;
+  }
+
+  .quick-add .push:disabled {
+    color: var(--ink-quiet);
+    cursor: default;
   }
 
   .visually-hidden {
@@ -975,8 +1230,14 @@
      appear in @media queries; every repetition cites that comment).
      Desktop-first: everything above is the base; only deltas live here. */
   @media (max-width: 640px) {
-    /* The mobile gutter pair (§4 gutters; --gutter-mobile is T24's). */
+    /* The mobile gutter pair (§4 gutters; --gutter-mobile is T24's). The
+       fixed chrome pins its own padding, so it needs the same swap —
+       otherwise the bar stays inset at the desktop gutter. */
     .desk {
+      padding-inline: var(--gutter-mobile);
+    }
+
+    .chrome {
       padding-inline: var(--gutter-mobile);
     }
 

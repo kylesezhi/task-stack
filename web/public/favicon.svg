@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Task Stack: the buried pile (rose, mint) under the canary top note,
+       stamped with the vermilion Done bead. Palette tokens, no gradients. -->
+  <rect x="17" y="15" width="37" height="37" rx="5" fill="#f7e2de" transform="rotate(8 35 33)"/>
+  <rect x="13" y="13" width="37" height="37" rx="5" fill="#e4efe7" transform="rotate(-7 31 31)"/>
+  <rect x="14" y="11" width="36" height="36" rx="5" fill="#fef39e"/>
+  <rect x="14" y="11" width="36" height="9" rx="4.5" fill="#ffffff" opacity="0.35"/>
+  <circle cx="43" cy="39" r="5.5" fill="#ae2a0c"/>
+</svg>

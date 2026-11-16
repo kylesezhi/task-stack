@@ -26,6 +26,7 @@
   import { formatCompletedTime, groupCompletedByDay } from "../lib/archive";
   import { sheetIn, sheetOut } from "../lib/sheet-motion";
   import { dialogFocus } from "../lib/dialog-focus";
+  import Icon from "../components/Icon.svelte";
 
   const doneCount = $derived($snapshot?.completed.length ?? 0);
   const groups = $derived(groupCompletedByDay($snapshot?.completed ?? []));
@@ -54,9 +55,18 @@
     out:sheetOut={{ y: 12 }}
   >
     <header class="sheet-header">
-      <h2 class="sheet-heading" id="archive-title">Archive</h2>
-      <span class="sheet-count">{doneCount} done</span>
-      <button type="button" class="sheet-close" onclick={closeOverlay}>Close</button>
+      <div class="sheet-title-block">
+        <h2 class="sheet-heading" id="archive-title">
+          Archive
+          <span class="sheet-count" aria-hidden="true">{doneCount} done</span>
+        </h2>
+        <!-- The mockup's subline ("Faded ink on clean paper. What is done
+             is done."): quiet italic over the ledger. -->
+        <p class="sheet-sub">Faded ink on clean paper. What is done is done.</p>
+      </div>
+      <button type="button" class="sheet-close" aria-label="Close" onclick={closeOverlay}>
+        <Icon name="close" />
+      </button>
     </header>
     <!-- One-<main>-rule: StackView stays mounted beneath this sheet and keeps
          the document's only <main>; sheets are dialogs, not mains. Focus
@@ -69,7 +79,16 @@
       {:else}
         {#each groups as group (group.key)}
           <section class="day">
-            <h3>{group.label}</h3>
+            <div class="day-meta">
+              <h3>{group.label}</h3>
+              <!-- The mockups' settled-count tail ("3 notes settled"),
+                   outside the h3 so the exact heading-name matchers keep
+                   working (archive-view.spec's daySection filter). -->
+              <span class="day-count" aria-hidden="true"
+                >{group.entries.length}
+                {group.entries.length === 1 ? "note settled" : "notes settled"}</span
+              >
+            </div>
             <ul>
               {#each group.entries as entry (entry.id)}
                 <li class="entry">
@@ -99,8 +118,38 @@
   .sheet-body {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: var(--space-md);
+  }
+
+  /* The archive header's subtitle (mockup "Faded ink on clean paper. What
+     is done is done."): quiet italic under the name. */
+  .sheet-title-block {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .sheet-sub {
+    margin: 0.25rem 0 0;
+    color: var(--ink-quiet);
+    font-size: var(--text-body-md);
+    font-style: italic;
+  }
+
+  /* The mockups' dismiss X: a quiet round button carrying the close glyph
+     instead of the shared text Close — the aria-label keeps the durable
+     "Close" name. */
+  .sheet-close {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    padding: 0;
+    font-size: inherit;
+    letter-spacing: normal;
   }
 
   .day {
@@ -108,26 +157,44 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
+    /* The mockups' ledger margin (archive_view_done_history's "faint
+       fountain ink margin rule"): the group steps in off a hairline. */
+    padding-left: var(--space-md);
+    border-left: 1px solid var(--paper-edge);
   }
 
   /* Day heading: quiet sans, ink-body, and the §5.6 ledger hairline that
      runs out to the sheet's right edge after the label. Labels stay as
      produced (never uppercased — "Today", "Jun 14, 2024" are prose). */
+  .day-meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  /* The settled-count tail: quiet tertiary ink at label size. */
+  .day-count {
+    color: var(--ink-quiet);
+    font-size: var(--text-label-sm);
+    white-space: nowrap;
+  }
+
+  /* The §5.6 ledger hairline: runs from the meta line out to the sheet's
+     right edge (it lived on .day h3::after before the .day-meta wrap;
+     the wrap carries it now so the rule keeps its full-length run). */
+  .day-meta::after {
+    content: "";
+    flex: 1;
+    align-self: center;
+    height: 1px;
+    background: var(--paper-edge);
+  }
+
   .day h3 {
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
     font-size: var(--text-label-md);
     font-weight: 600;
     color: var(--ink-body);
-  }
-
-  .day h3::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--paper-edge);
   }
 
   .day ul {

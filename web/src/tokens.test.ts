@@ -178,15 +178,15 @@ function scanTargets(raw: string, isSvelte: boolean): string[] {
 }
 
 test("no color literals outside tokens.css (guard: colors only come from tokens)", () => {
-  // Sanity on the walk itself: app.css + all ten .svelte files must be IN
-  // the scan, otherwise the guard passes vacuously after a future rename.
-  // The exact breakdown (update it when a component or view joins):
+  // Sanity on the walk itself: app.css + all eleven .svelte files must be
+  // IN the scan, otherwise the guard passes vacuously after a future
+  // rename. The exact breakdown (update it when a component or view joins):
   // App shell (1) + views (5: FirstRun/Archive/List/Stacks/Stack) +
-  // components (4: NoteCard T25, PeekingEdges T26, PopCeremony T29,
-  // TossCeremony T30) = 10.
+  // components (5: NoteCard T25, PeekingEdges T26, PopCeremony T29,
+  // TossCeremony T30, Icon) = 11.
   const files = collect(srcRoot);
   expect(files.filter((entry) => entry.rel === "app.css")).toHaveLength(1);
-  expect(files.filter((entry) => entry.file.endsWith(".svelte"))).toHaveLength(10);
+  expect(files.filter((entry) => entry.file.endsWith(".svelte"))).toHaveLength(11);
   expect(
     files.some((entry) => entry.rel === EXEMPT),
     "tokens.css must exist to be exempted",

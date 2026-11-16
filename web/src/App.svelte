@@ -91,6 +91,17 @@
 
 <svelte:window onkeydown={onKeydown} />
 
+<!-- The mockups' warm desk ambience (stack_view_home / list_view_open_
+     stack "soft diffused light cast"): two blurred color fields behind
+     every view — a gold-soft pool above the pile, a faint vermilion-tinted
+     one off to the side. Pure atmosphere: fixed (never scrolls, never
+     grows the document), behind all content (z-index −1 paints above the
+     body's desk ground but below every in-flow view), announced to nobody. -->
+<div class="ambient" aria-hidden="true">
+  <div class="glow glow-gold"></div>
+  <div class="glow glow-ember"></div>
+</div>
+
 {#if $snapshot === null}
   {#if $status !== "online"}
     <main class="connecting"><p class="quiet">Connecting…</p></main>
@@ -141,6 +152,45 @@
 {/if}
 
 <style>
+  /* The ambient desk light (mockup "ambient atmosphere" blobs). Fixed and
+     clipped so they can never open scroll overflow; z-index −1 sits them
+     above the body's --desk ground and below every view. Token tints via
+     color-mix (evergreen-only, DECISIONS.md §11); the blur is the mockups'
+     blur-3xl softness. */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  /* The warm pool above center stage (mockup: secondary-fixed/20, 640×380). */
+  .glow-gold {
+    top: -8rem;
+    left: 50%;
+    translate: -50% 0;
+    width: 640px;
+    height: 380px;
+    background: color-mix(in srgb, var(--gold-soft) 20%, transparent);
+    filter: blur(64px);
+  }
+
+  /* The faint vermilion-tinted field off the right (mockup: primary-fixed/15). */
+  .glow-ember {
+    top: 33%;
+    right: -6rem;
+    width: 320px;
+    height: 320px;
+    background: color-mix(in srgb, var(--accent-soft) 15%, transparent);
+    filter: blur(64px);
+  }
+
   .connecting {
     /* T28 dvh cascade (DECISIONS.md §11 evergreen-only): 100vh first, then
        100dvh so a collapsing mobile URL bar is honored honestly. */

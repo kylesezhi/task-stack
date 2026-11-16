@@ -308,7 +308,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   so the budget must be checked against the daemon's actual metric when Docker
   is available.*
 
-- [ ] **T36 · Compose + ops** — M (Docker chosen; systemd dropped)
+- [x] **T36 · Compose + ops** — M (Docker chosen; systemd dropped)
   `docker-compose.yml`: image from T35, persistent volume for `data.db`, port
   mapping, `restart: unless-stopped`. Deployment is manual via the docker CLI
   on the local VM: get the image there by hand (`docker save` → copy →
@@ -316,6 +316,26 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** service boots on the VM via documented manual steps, survives
   a reboot, `/api/health` returns 200.
   Depends: T35
+  *Verified via: `docker-compose.yml` + `.env.example` + `DEPLOY.md` +
+  `.gitignore` authored; the fresh-clone build chain was validated locally
+  (`pnpm install --frozen-lockfile` → `pnpm build` → `pnpm --filter
+  @task-stack/server deploy --prod` → runtime-layout smoke: health 200, `/`
+  200, create/push 201, SIGTERM exit 0, note survives restart). §4/§8 fences
+  were executed against a populated throwaway Node payload in two modes (all
+  HTTP-touching fences in one continuous shell, and each fence in a fresh
+  shell); the `sudo reboot` fence and every fence whose effect needs Docker
+  (`docker ps`/`docker inspect`, `docker compose`, `docker build`) were NOT
+  run — the harness stubs those lines. The drift ARITHMETIC was exercised
+  separately by a 10-case synthetic table across TZ=UTC and
+  TZ=America/New_York, and the R13 guarded-cd header was exercised under a
+  fake `$HOME`. That proves SIGTERM-checkpointing and durability across a
+  process restart, but NOT reboot survival, `restart: unless-stopped`,
+  daemon enablement, or bind-mount ownership under Docker. Real
+  `docker build`/`up`/reboot on the VM remains to be run by the owner — no
+  Docker daemon on the authoring machine and `docker build` has never been
+  executed anywhere. The `[x]` records authored + harness-verified
+  artifacts; the Done-when's reboot-survival criterion stays pending that
+  owner execution.*
 
 - [ ] **T37 · Backups** — S
   Nightly job copying the SQLite file from the host volume (or via

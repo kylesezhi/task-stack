@@ -9,6 +9,9 @@ server/data.db
 server/data.db-wal
 server/data.db-shm
 
+# Deployed DB via the compose bind mount (docker-compose.yml) — never commit
+/data/
+
 # Environment / secrets
 .env
 .env.*

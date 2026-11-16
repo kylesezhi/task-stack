@@ -1,0 +1,73 @@
+# Compose Specification v2, for the `docker compose` CLI plugin (not the
+# retired python `docker-compose`). The top-level `name:` attribute is a
+# documented Compose v2 key; if an older CLI rejects the file on an unknown
+# field, delete the line — the project name then falls back to the directory
+# base name, which is already `task-stack`, so nothing else changes.
+name: task-stack
+
+services:
+  app:
+    # Both keys together: compose builds the T35 Dockerfile and tags the
+    # result with `image:`. The `image:` key is what makes the tag overridable
+    # for rollback (IMAGE_TAG=rollback docker compose up -d — DEPLOY.md §6).
+    image: task-stack:${IMAGE_TAG:-latest}
+    build:
+      context: .
+
+    # Fixed name so `docker inspect task-stack`, `docker logs task-stack` and
+    # friends don't need project/service prefixes. Single-user app — exactly
+    # one container, ever.
+    container_name: task-stack
+
+    # Survives a reboot only if the docker daemon itself is enabled in
+    # systemd (`systemctl is-enabled docker`) — DEPLOY.md's pre-flight covers
+    # that check and its fix.
+    restart: unless-stopped
+
+    # With `init: true`, docker runs tini as PID 1 inside the container: it
+    # reaps zombies and forwards signals to the app cleanly. Node's own
+    # SIGTERM/SIGINT handler still runs under it (app.close(), then
+    # db.close(), which checkpoints the WAL), so a plain `docker compose
+    # stop` is safe and a backup taken afterwards sees one consistent file.
+    init: true
+
+    ports:
+      # host:container — the container side is fixed at 3000 because the
+      # Dockerfile bakes PORT=3000. 8181 on the host: chosen to avoid the
+      # ports already taken on the owner's VM; the concrete list lives in
+      # DEPLOY.md §2's pre-flight, where it is operationally useful.
+      # BIND_ADDR=127.0.0.1 is the one-line lockdown if a reverse proxy
+      # fronts the app.
+      - "${BIND_ADDR:-0.0.0.0}:${HOST_PORT:-8181}:3000"
+
+    volumes:
+      # Bind mount, not a named volume, so T37's nightly backup is a plain cp
+      # of a predictable host path. The image's DB_PATH already points at
+      # /data/data.db — nothing to configure here.
+      # The directory MUST exist and be owned by uid 1000 BEFORE the first
+      # `up`: Docker auto-creates a missing bind source as root-owned, the
+      # image runs as the `node` user (uid 1000 in official node images), and
+      # SQLite would fail to write — the container crash-loops. DEPLOY.md
+      # step 2 handles it.
+      - ./data:/data
+
+    # Cap pino's stdout so a small VM disk can't fill up with logs.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # HOST/PORT/DB_PATH/WEB_DIST_PATH are deliberately NOT restated in an
+    # `environment:` block — the Dockerfile bakes HOST=0.0.0.0, PORT=3000,
+    # DB_PATH=/data/data.db, WEB_DIST_PATH=/app/web/dist. Duplicating them
+    # here would invite drift; if you think one needs changing, change the
+    # Dockerfile instead.
+
+    # The healthcheck comes from the Dockerfile's HEALTHCHECK (30s interval /
+    # 5s timeout / 10s start-period / 3 retries against /api/health) and is
+    # inherited here — not redefined.
+
+    # Also deliberately absent (nothing untestable ships in v1):
+    # security_opt, cap_drop, read_only, tmpfs, pids_limit, mem_limit, cpus,
+    # depends_on, expose. See DEPLOY.md §10 for what was considered and put off.

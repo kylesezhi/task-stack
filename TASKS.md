@@ -345,7 +345,7 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   is tested once (put the DB back on the volume → state intact).
   Depends: T36
 
-- [ ] **T38 · README + LICENSE final** — M
+- [x] **T38 · README + LICENSE final** — M
   What it is, screenshot (a ceremony GIF if possible), Docker-first self-host
   instructions, credit to the originating article, MIT license, open-server
   hygiene note (never publish the origin URL).

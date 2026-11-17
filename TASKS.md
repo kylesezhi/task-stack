@@ -352,19 +352,56 @@ order. Sources of truth (in the repo at `/home/kyle/Dropbox/opensource/task-stac
   **Done when:** a fresh clone builds and runs by following the README alone.
   Depends: T36
 
-- [ ] **T39 · v1 exit review** — S
+- [x] **T39 · v1 exit review** — S
   Final checklist pass; docs updated to match reality (palette recorded back
   into `DECISIONS.md`, any drifted decisions noted).
   **Done when:** every item below is ticked.
+  *Verified via the full gate set on 2026-11-17 (logs `/tmp/opencode/t39-*.log`):
+  `pnpm lint` exit 0 (ESLint `--max-warnings 0` + Prettier check); `pnpm -r test`
+  exit 0 — shared 754 passed, server 98 passed, web 119 passed / 1 skipped (120
+  collected; 972 across the three packages); `pnpm build` exit 0;
+  svelte-check 0 errors / 0 warnings; e2e 14/14 passed — including the
+  keyboard-only walkthrough + axe spec (no critical/serious), the two-context
+  WS sync spec, the self-hosted-fonts spec (zero external font requests),
+  responsive layouts, and the 1/8/40-note edge-determinism spec. A fresh clone
+  followed the README's Run-from-source path end-to-end (`mise install` →
+  `pnpm install` → `pnpm build` → start), run with `PORT=3117` and a throwaway
+  `DB_PATH` via `node server/dist/index.js` because the default port 3000 was
+  occupied by a local dev server (the default-port attempt logged EADDRINUSE —
+  README's Configuration table documents `PORT`/`DB_PATH` for source runs, so
+  this is not a README defect). From that isolated run: health `{"ok":true}`,
+  `X-Robots-Tag: noindex` on `/` and `/api/*`, built HTML served, and the core
+  flows re-verified against the production build: push (position 1, others
+  shift), pop/complete (archive row with `stackName` snapshotted at
+  completion), toss (positions re-compacted, no archive credit), edit, reorder
+  (200; stale-id rejected 400), stack create/rename/delete (pending notes die,
+  archived rows survive), active switch, export (state + `exportedAt`), two WS
+  clients receiving identical snapshots, and SIGTERM durability — after
+  SIGTERM the DB dir held only `data.db` (WAL checkpointed, no `-wal`/`-shm`
+  left) and the restart returned the full state. The README's Docker path
+  remains unexecuted (no daemon access without a sudo password — the same
+  fence T35/T36 recorded). Owner decision recorded today:
+  the reviewable scope is complete and reconciled into DECISIONS.md, PLAN.md
+  and DESIGN.md, and the two deployed-instance gates below stay owner-pending
+  (they need the owner's VM + a Docker daemon, and T37's nightly job is still
+  unbuilt — the only other open task in this plan), so this checklist must
+  not read as "deployed"; the flow matrix above is the proven local
+  equivalent of the deployed-instance criterion.*
 
 ### v1 exit criteria
 
-- [ ] All checks green locally: typecheck, lint, unit tests, build, e2e
-- [ ] Deployed on the VM with nightly backups verified once
+- [x] All checks green locally: typecheck, lint, unit tests, build, e2e
+- [ ] Deployed on the VM with nightly backups verified once — needs the
+      owner's VM and a Docker daemon; the nightly job is T37 (still open)
 - [ ] Core flows verified on the deployed instance: push / pop / toss / edit /
-      reorder / stack CRUD / switch / archive
-- [ ] README self-host verified from a fresh clone
-- [ ] DECISIONS.md / PLAN.md / DESIGN.md reconciled with what was built
+      reorder / stack CRUD / switch / archive — needs the deployed VM; the
+      same flow matrix is verified against a fresh-clone production build
+      locally (see T39's note)
+- [x] README self-host verified from a fresh clone — the Run-from-source path
+      was verified end-to-end from a fresh clone; the README's Docker path
+      remains unexecuted (no daemon access without a sudo password,
+      consistent with T35/T36)
+- [x] DECISIONS.md / PLAN.md / DESIGN.md reconciled with what was built
 
 ### Out of scope for v1 (do not build)
 

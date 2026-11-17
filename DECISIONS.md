@@ -35,6 +35,13 @@ Concept credited; no text or artwork copied from that article.
 - The stack **visibly grows** with depth — you *feel* how much is in there without reading
   any of it. Depth trust without a list.
 - Deep stacks cap visible edges (~15) with a "+N" tag so 100-note stacks don't wreck the layout.
+- As built: the cap is **15 visible cards total** — the top note plus 14 buried
+  edges ("+N" = count − 15, so 40 notes → "+25 more"). And the peek side is
+  **hash-derived per note rather than strictly alternating** (`edgeOffset(id)`'s
+  sign): strict parity would flip every buried edge on every push/pop, so each
+  note instead keeps its placement forever, and populated stacks still end up
+  with edges on both sides. The buried edge's vertical drop (`edgeDrop(id)`) is
+  always positive — the pile's mass grows downward.
 - Reading/reordering buried notes: an explicit **"open" action flips to a plain list view**
   (all notes readable, drag-to-reorder, edit, toss). One click to open, one to close.
 - Rejected: fan-out skeuomorphic reorder (prettier but fiddlier than a list); strictly-one-item
@@ -56,6 +63,11 @@ Concept credited; no text or artwork copied from that article.
 ### 5. Note content
 - **Plain text, one field** — title-length, like a real sticky note. Created/completed
   timestamps are stored for the archive.
+- As built: lengths are pinned — stack names ≤ 80 chars, note text ≤ 280
+  (`STACK_NAME_MAX_LENGTH` / `NOTE_TEXT_MAX_LENGTH` in `shared/src/validation.ts`),
+  both trimmed before validation (whitespace-only is rejected), and every request
+  body is a zod `strictObject` — an unknown key is a 400, not a silently stripped
+  field.
 - Rejected: title+body, tags, colors-as-user-choice, due dates. Purity is the product.
   (Note *visual* colors exist — see §8 — assigned deterministically, not chosen.)
 
@@ -78,8 +90,47 @@ Concept credited; no text or artwork copied from that article.
 - **Warm paper skeuomorphism**: post-it yellows plus a few sibling colors (assigned
   deterministically per note from id hash — variety without a picker), subtle paper grain
   (SVG turbulence), soft shadows, slight rotations, calm desk-like background.
+- As built (recorded back from `web/src/tokens.css`, 2026-11-17): the note palette is
+  **exactly 8 colors, order-fixed** — `--note-0` canary `#fef39e`, `--note-1`
+  deep canary `#fcf195`, `--note-2` peach `#fdeede`, `--note-3` warm peach
+  `#fce8db`, `--note-4` mint `#e4efe7`, `--note-5` deep mint `#e0eee4`,
+  `--note-6` rose `#f7e2de`, `--note-7` lavender `#e9e4f0` — with
+  `colorIndex(id, 8)` mapping a note's hash to one of them (the index IS the
+  contract; the "yellows plus a few siblings" sketch above landed as 8).
+- As built, the rest of the palette, all flowing through `web/src/tokens.css` —
+  the single color source by decision; the guard test (`web/src/tokens.test.ts`)
+  enforces it over web/src's component stylesheets (whole `.css` files, `.svelte`
+  `<style>` blocks, and inline `style="…"` attribute values — `.ts`/`.js` code
+  and markup prose are deliberately not in its reach):
+  - The desk `--desk: #fbf9f3` and the five paper surfaces `--paper: #ffffff`,
+    `--paper-warm: #f5f3ed`, `--paper-dim: #f0eee8`, `--paper-shade: #eae8e2`,
+    `--paper-edge: #e4e2dd`.
+  - The ink ramp: `--ink: #26211c` (note ink), `--ink-body: #1b1c18`,
+    `--ink-muted: #5a413b`, `--ink-quiet: #625b53`, `--ink-faded: #665f56`, plus the
+    outline pair `--outline: #8e706a` / `--outline-soft: #e2bfb7`.
+  - The single loud accent is **vermilion**: `--accent: #ae2a0c`,
+    `--accent-hover: #972409`, `--on-accent: #ffffff`, `--accent-soft: #ffdad3`,
+    `--accent-soft-deep: #ffb4a4`; plus the quiet gold secondary family
+    `--gold: #67601b`, `--gold-soft: #efe591`, `--gold-dim: #d2c978`.
+  - The ember/flame trio `--ember-hot: #ffe600`, `--ember: #ff9a3c`,
+    `--ember-deep: #ff4500` — used by the pop ceremony only.
+  - The shadow composites are copied verbatim from the approved Stitch mockups
+    in `reference/stitch_task_stack_ui_brief/` (rgba composites live only in
+    `tokens.css`); the glue strip keeps the mockup's verbatim alphas
+    (0.4 / 0.15 / 0) and its 24px band, with the mid-stop deliberately
+    hand-tuned from the mockup's 50% default to 60%; the paper grain is
+    deliberately NOT copied mockup data — the mockup renders it as a
+    radial-gradient dot grid in the same `#8e706a`, and the app re-implements
+    it as a hand-built inline-SVG feTurbulence tile tinted with that color.
 - **Caveat** (OFL, self-hosted) as the handwritten font for v1. Roadmap: replace with a
   font made from the owner's own handwriting.
+- As built, fonts: **Caveat** (variable, wght 400–700) plus **Inter** (variable, wght
+  400–600) as the quiet sans for everything else, both self-hosted as vendored woff2
+  files in `web/public/fonts/` with their SIL OFL 1.1 license files bundled —
+  no CDN, no font `<link>` tags. The mockups' display sans (Epilogue) was
+  deliberately **not** adopted (the UI brief pins one quiet sans; see
+  `DESIGN.md` §2). Note text renders at `--text-note: 29px` — inside the
+  brief's 26–32px band.
 - **Light-only for v1**, but all colors flow through CSS custom properties so a dark
   "evening desk" theme can slot in without refactor.
 - Microcopy: **quietly playful** — small dry asides, never exclamation-mark energy.
@@ -94,6 +145,12 @@ Concept credited; no text or artwork copied from that article.
   zero-native-module runtime and the smallest Docker image). One language across
   the repo; types shared with the frontend via a `shared/` workspace package.
 - **SQLite** single-file storage; nightly backup = file copy + `GET /api/export` JSON dump.
+  As built: the nightly job is **not installed** (T37 still open). The two documented
+  escape hatches (`DEPLOY.md` §8) are manual: a timestamped `GET /api/export` fetch
+  written outside the work tree, or stop → copy `data.db` + `-wal`/`-shm` → start.
+  SIGTERM cleanly closes the DB (WAL checkpoint, no `-wal`/`-shm` left) —
+  verified by direct observation (see the T39 note in `TASKS.md`).
+  `GET /api/export` returns the `/api/state` payload plus an `exportedAt` timestamp.
 - **WebSocket broadcast sync**: every mutation → server broadcasts the full state snapshot
   to all connected clients. State is tiny (hundreds of notes max); no delta logic, no
   conflict handling, always authoritative.
@@ -117,6 +174,13 @@ Concept credited; no text or artwork copied from that article.
   prerequisite).
 - Tests: **Vitest** units for stack-ordering logic + API handlers; **Playwright** e2e smoke
   (push from one browser context, watch it arrive in another via WS; push→pop→archive flow).
+  As built (2026-11-17 exit-review gate): 972 unit tests collected across the
+  three packages (shared 754 · server 98 · web 120, one skipped) — including
+  the token guard (§8 above) — plus 14 Playwright e2e specs, among them a
+  keyboard-only walkthrough + axe accessibility spec and a fonts-self-hosted
+  spec (zero external font requests).
+- Toolchain as built: `mise.toml` pins **node 24.22.1** + **pnpm 12.15.0** (engines
+  `node >= 24.15`, for the built-in `node:sqlite` module per §9).
 - Evergreen browsers only; full keyboard reachability (`/` focuses input, Enter pushes,
   Esc clears); `aria-live` for stack changes.
 

@@ -29,28 +29,41 @@ nothing glowing, glassy, neon, or brutalist.
 colors. Propose a full palette (desk, note set, inks, primary action, chips)
 that serves the warm, light, paper aesthetic.
 
+*As built (2026-11-17), the palette that shipped:* desk `#fbf9f3`; five paper
+surfaces — `#ffffff`, `#f5f3ed`, `#f0eee8`, `#eae8e2`, `#e4e2dd`; inks —
+`#26211c` for note text, `#1b1c18` default UI text, `#5a413b` secondary,
+`#625b53` quietest, `#665f56` faded archive ink, hairlines `#8e706a` /
+`#e2bfb7`; the single loud accent, a vermilion `#ae2a0c` (hover `#972409`,
+tints `#ffdad3` / `#ffb4a4`); a quiet gold secondary `#67601b` / `#efe591` /
+`#d2c978`; and the pop ceremony's ember trio `#ffe600` / `#ff9a3c` /
+`#ff4500`.
+
 **Desk/background:** light, warm desk tones (off-white papers/linens), soft
 ambient light, very subtle vignette. The stack is the only "loud" thing on
 screen.
 
 **Note colors:** a small sticky-note palette with a few sibling colors for
 variety. Each note gets exactly one color from the palette, assigned
-automatically; no user-facing color picker.
+automatically; no user-facing color picker. *As built: exactly eight hues,
+order-fixed* — canary `#fef39e`, deep canary `#fcf195`, peach `#fdeede`, warm
+peach `#fce8db`, mint `#e4efe7`, deep mint `#e0eee4`, rose `#f7e2de`,
+lavender `#e9e4f0`.
 
 **Note material:** subtle paper grain, a faint glue-strip sheen along the top
 edge (like a real post-it), slightly darker 1px paper edge, soft layered
 drop-shadow so the top note lifts off the pile.
 
 **Placement feels hand-placed, never gridded:** every note carries a slight
-tilt (±2–6°); buried edges alternate peeking left/right, each offset 6–10px —
-never a perfect stack, never a card grid.
+tilt (±2–6°); buried edges peek left or right — the side fixed per note, not
+strictly alternating — each offset 6–10px, and always sitting a little lower
+than the top note: never a perfect stack, never a card grid.
 
 **Typography:**
-- Note text: **Caveat** (handwritten, Google font; any warm marker-style
-  handwritten font in a pinch), large — the top note is readable from across a
-  desk (think 26–32px on desktop).
-- Everything else (labels, buttons, archive metadata, microcopy): a quiet small
-  sans-serif (Inter or similar), muted ink tones.
+- Note text: **Caveat** (handwritten; self-hosted in the built app, not
+  loaded from Google), large — the top note is readable from across a desk
+  (think 26–32px on desktop; as built, 29px).
+- Everything else (labels, buttons, archive metadata, microcopy): a quiet
+  small sans-serif — **Inter**, as built — muted ink tones.
 
 **Buttons/controls:** quiet and few. Primary action ("Done") is a rounded
 button in one clearly-primary color — the single strong accent on screen.
@@ -66,8 +79,8 @@ Line icons only, used sparingly.
 - **Top note card** — square mini sticky (~300–340px desktop), slightly tilted,
   handwritten text, one palette color, lifted off the pile by its shadow.
 - **Peeking edges** — partial notes behind the top note, each tilted a little
-  more, alternating sides, showing only a sliver of paper. They suggest buried
-  tasks; no text is visible on them.
+  more, peeking left or right (side fixed per note), showing only a sliver of
+  paper. They suggest buried tasks; no text is visible on them.
 - **"+N more" scrap** — a tiny tilted paper scrap near the bottom edge for deep
   stacks (e.g., "+25 more").
 - **Quick-add input** — below the stack; styled like a blank note. Placeholder:

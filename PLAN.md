@@ -57,10 +57,17 @@ Semantics:
   (guarded by a client-side confirm; `stack_name` keeps the archive readable).
 - Toss = hard `DELETE` from `notes`. Pop = move row to `completed_notes`.
 
+As built (verified 2026-11-17): `server/src/db.ts` creates exactly these four
+tables with exactly these columns (`CREATE TABLE IF NOT EXISTS`, idempotent on
+reopen), plus `PRAGMA journal_mode = WAL` and `PRAGMA foreign_keys = ON` —
+both verified rather than merely set on every file-backed open (the
+`:memory:` test path skips WAL by design; foreign keys apply to every open).
+
 ## API sketch (Fastify, prefix `/api`)
 
 | Method & path | Purpose |
 |---|---|
+| `GET /api/health` | Liveness probe: `{ok:true}` |
 | `GET /api/state` | Full snapshot: `{ activeStackId, stacks[], notes[], completed[] }` |
 | `POST /api/stacks` `{name}` | Create stack, make it active |
 | `PATCH /api/stacks/:id` `{name?, position?}` | Rename / reorder drawer |
@@ -82,6 +89,14 @@ optimistic UI, no delta logic. (State is tiny; this is boring and robust.)
 All mutation responses also return the fresh snapshot, so the mutating client
 updates in the same round-trip as the WS broadcast.
 
+As built (2026-11-17): every successful mutation responds with the **fresh
+full snapshot** — 201 on create, 200 otherwise. Errors are always
+`{"error": "..."}` with **400 or 404 only** (validation failures use the first
+zod issue's message; there is no 409/5xx path). Every response — `/api/*` and
+the served static HTML alike — carries `X-Robots-Tag: noindex`. WS frames are
+bare snapshots: inbound client messages are ignored, and there are no
+heartbeats.
+
 ## Frontend structure (Svelte 5, `web/`)
 
 Routes are views, not URLs (single page, no router):
@@ -89,9 +104,11 @@ Routes are views, not URLs (single page, no router):
 - **StackView (default)** — the skeuomorphic stack of the active stack.
   - Top note: fully readable (Caveat font, paper grain, soft shadow, slight
     tilt). Pop + toss + edit affordances on it.
-  - Buried notes: edges peeking (6–10px) left/right alternating, tilt/offset
-    derived deterministically from `hash(id)` → stable across devices/reloads.
-    Cap ~15 visible edges, then a "+N" tag.
+  - Buried notes: edges peeking (6–10px) on hash-derived sides, tilt/offset
+    derived deterministically from a hash of the note's `id` → stable across
+    devices/reloads (each note keeps its side forever; populated stacks still
+    show both sides). 15 visible cards total — top note + 14 buried edges —
+    then a "+N" tag (`+N` = count − 15).
   - Quick-add input below the stack: `/` focuses it, Enter pushes, Esc clears.
     New note slaps on with a spring settle.
   - Pop triggers the ceremony: lift → crumple (SVG feTurbulence displacement)
@@ -100,27 +117,46 @@ Routes are views, not URLs (single page, no router):
     add affordance. No confetti, no shame.
 - **ListView** ("open" action) — plain readable list of all notes in the
   active stack: drag-to-reorder, inline edit, toss. Close returns to StackView.
-- **StacksMenu** — list stacks (name + note count), create/rename/reorder,
-  delete (confirm — pending notes die), switch active.
+- **StacksDrawer** (shipped name; matching `DESIGN.md` §5.4 — the plan's
+  earlier "StacksMenu") — list stacks (name + note count), create, rename,
+  delete (confirm — pending notes die), switch active. No reorder in the
+  drawer: drawer order is server-side (`PATCH /api/stacks/:id` `position`),
+  with deliberately no drag-reorder UI in v1.
 - **ArchiveView** — plain dated global list, newest first, stack name shown.
 
-Deterministic pseudo-randomness (tilt, offset, color index) lives in
-`shared/random.ts`: `tilt(id)`, `offset(id)`, `colorIndex(id)` — pure functions
-of the note id, unit-tested to be stable and bounded.
+Deterministic pseudo-randomness (tilt, edge peek, edge drop, color index)
+lives in `shared/random.ts`: `tilt(id)`, `edgeOffset(id)`, `edgeDrop(id)`,
+`colorIndex(id, paletteSize)` — pure functions of the note id, unit-tested to
+be stable and bounded. As built: the hash is 32-bit FNV-1a plus a final
+xor-shift avalanche, driving four decorrelated per-purpose streams (tilt,
+horizontal edge peek, buried-edge vertical drop, color), no `Math.random`;
+tilt magnitudes run [2,6)° and edge magnitudes [6,10)px.
 
-Note colors: small warm palette (post-it yellow + 3–4 siblings); color assigned
-per note via `colorIndex(id)` — variety without pickers.
+Note colors: an eight-color warm palette (the original sketch — post-it
+yellow + 3–4 siblings — landed as 8 sibling hues; recorded in
+`DECISIONS.md` §8); color assigned per note via `colorIndex(id, 8)` —
+variety without pickers.
 
 ## Repo layout
 
 ```
 task-stack/
-├── DECISIONS.md · PLAN.md · README.md · LICENSE (MIT)
-├── mise.toml      # pinned toolchain: node + pnpm — mise is the only prerequisite
-├── package.json (pnpm workspaces)
-├── shared/        # TS types + pure logic (ordering, tilt/color), consumed by web+server
-├── server/        # Fastify + node:sqlite (built-in) + WS; serves web/dist in production
-└── web/           # Svelte 5 + Vite; hand-written CSS; e2e tests live here (Playwright)
+├── DECISIONS.md · PLAN.md · DESIGN.md · TASKS.md · DEPLOY.md · README.md ·
+│   LICENSE (MIT)
+├── mise.toml      # pinned toolchain (node 24.22.1 + pnpm 12.15.0) + mise run tasks
+├── package.json (pnpm workspaces) · pnpm-workspace.yaml · pnpm-lock.yaml
+├── eslint.config.mjs · .prettierrc.json · .prettierignore · .editorconfig
+├── Dockerfile · .dockerignore · docker-compose.yml · .env.example
+├── docs/            # capture.mjs (README asset capture) + images/ (stack.png,
+│   │                # pop-ceremony.gif)
+├── reference/       # stitch_task_stack_ui_brief/ — the tracked design mockups
+│                    # (the T24 palette source)
+├── shared/          # TS types + deterministic visual randomness + payload
+│                    # validation schemas, consumed by web+server
+├── server/          # Fastify + node:sqlite (built-in) + WS; serves web/dist in
+│                    # production
+└── web/             # Svelte 5 + Vite; hand-written CSS; e2e tests live here
+                     # (Playwright)
 ```
 
 ## Milestones
@@ -159,6 +195,18 @@ compose with a persistent volume for `data.db`; optional Caddy reverse proxy
 (screenshots, credit, self-host instructions); deployment hygiene for the
 open server: noindex header, origin never written into repo files.
 
+**As built (2026-11-17):** M0–M4 are built. Deltas from the text above — PWA
+was deferred before M4 (per `DECISIONS.md` §10, so its HTTPS implication never
+applied); the optional Caddy/TLS step was not used; the README's screenshot
+and ceremony GIF were produced by `docs/capture.mjs`; the nightly backup note
+stayed open as task T37. The full local gate set is green: `pnpm lint`,
+972 unit tests (collected), `pnpm build`, svelte-check (0 errors / 0
+warnings), 14/14 e2e specs; a fresh clone builds and runs via the README's
+Run-from-source path, and the core flows were re-verified against that
+production build (see T39 in `TASKS.md`). The README's Docker path is the one
+unexecuted piece (no Docker daemon on the authoring machine without sudo —
+the same fence T35/T36 recorded).
+
 ## Non-goals (v1, by design)
 
 Reminders, due dates, calendars, recurring tasks (philosophically unstackable);
@@ -176,4 +224,10 @@ dark mode (theme tokens ready, theme ships later); per-stack friction
 
 ## Suggested next step
 
-M0. The design tree is fully resolved; nothing downstream is blocked.
+Close the two owner-pending gates for v1 ship sign-off — everything else is
+green (T39 in `TASKS.md`). On the owner's VM with a Docker daemon: run the
+real `docker build` + `docker compose up -d`, then the `sudo reboot` survival
+fence. Then T37: install the nightly backup job and test one restore. Finally,
+walk the core flows (push / pop / toss / edit / reorder / stack CRUD / switch /
+archive) on the deployed instance. The design tree is fully resolved; nothing
+downstream is blocked.
